@@ -20,6 +20,7 @@
 - [Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts](#assignment-412--organizing-raw-data-processed-data-and-output-artifacts)
 - [Assignment 4.13 — Creating and Running a First Python Script for Data Analysis](#assignment-413--creating-and-running-a-first-python-script-for-data-analysis)
 - [Assignment 4.14 — Understanding Python Numeric and String Data Types](#assignment-414--understanding-python-numeric-and-string-data-types)
+- [Assignment 4.15 — Working with Python Lists, Tuples, and Dictionaries](#assignment-415--working-with-python-lists-tuples-and-dictionaries)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -60,6 +61,7 @@
 | 4.12 | Organizing Raw Data, Processed Data, and Output Artifacts | Harsh Singh | `Done` | 2026-04-17 | Folder structure, data lifecycle, naming conventions, and best practices documented |
 | 4.13 | Creating and Running a First Python Script for Data Analysis | Harsh Singh | `Done` | 2026-04-18 | Wrote `student_marks_analysis.py` demonstrating variables, lists, loops, conditionals, and basic arithmetic with a printed summary report |
 | 4.14 | Understanding Python Numeric and String Data Types | Harsh Singh | `Done` | 2026-04-18 | Wrote `numeric_and_string_types.py` demonstrating int/float/str types, arithmetic, f-string formatting, and explicit type conversion with a type-mismatch example |
+| 4.15 | Working with Python Lists, Tuples, and Dictionaries | Harsh Singh | `Done` | 2026-04-18 | Wrote `collections_demo.py` demonstrating list creation and modification, tuple immutability with indexed access, and dictionary key-based access with `.get()` safety |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -75,6 +77,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | 2026-04-17 | Harsh Singh | Completed assignment 4.12: Documented data organization strategy — raw/processed/outputs folder structure, data lifecycle, naming conventions, and best practices |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.13: Authored and executed `student_marks_analysis.py` — a first Python script demonstrating variables, lists, a loop, a conditional, basic arithmetic, and a formatted console summary report |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.14: Authored `numeric_and_string_types.py` demonstrating integer/float/string variables, arithmetic, concatenation, f-string formatting, and a type-mismatch example fixed via `str()`, `int()`, and `float()` conversions |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.15: Authored `collections_demo.py` demonstrating Python lists (append/update/remove), tuples (indexed access and immutability check), and dictionaries (key-based access and `.get()` safe lookup) |
 
 ---
 <!-- END TEMP SECTION -->
@@ -831,6 +834,260 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates a clear understanding of Python's core numeric and string data types. Integer and floating-point variables were used to perform a full set of arithmetic operations; string variables were combined through concatenation and f-string formatting to produce readable messages. The type-mismatch example highlights that Python does not implicitly mix unrelated types, while the use of `str()`, `int()`, and `float()` shows how explicit type conversion resolves such mismatches cleanly. Together, these exercises confirm a solid grasp of the foundational data types required for any further Python programming and data analysis work.
+
+---
+
+## Assignment 4.15 — Working with Python Lists, Tuples, and Dictionaries
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to develop a clear understanding of Python's three core built-in collection data types — **list**, **tuple**, and **dictionary** — by writing a simple script that creates each collection with meaningful values, demonstrates correct element access using indexes and keys, and shows at least one modification performed on a list.
+
+### File Name
+
+`collections_demo.py`
+
+### Full Python Script
+
+```python
+# collections_demo.py
+# A demonstration script that explores Python's three core built-in
+# collection types: list, tuple, and dictionary.
+# It shows how each collection is created, accessed, and (where allowed)
+# modified, along with clear printed output for each step.
+
+print("=" * 55)
+print("  PYTHON COLLECTIONS DEMONSTRATION — LIST, TUPLE, DICT")
+print("=" * 55)
+
+# ----------------------------------------------------------
+# Section 1: List — an ordered, mutable collection
+# ----------------------------------------------------------
+
+# A list of courses a student has enrolled in this semester.
+# Lists use square brackets [] and can hold multiple values of any type.
+enrolled_courses = ["Python", "Statistics", "SQL", "Communication"]
+
+print("\nSection 1: List")
+print(f"  Original list              : {enrolled_courses}")
+print(f"  Total number of courses    : {len(enrolled_courses)}")
+
+# Access elements using indexes (indexing starts at 0)
+print(f"  First course  (index 0)    : {enrolled_courses[0]}")
+print(f"  Third course  (index 2)    : {enrolled_courses[2]}")
+print(f"  Last course   (index -1)   : {enrolled_courses[-1]}")
+
+# --- Modification 1: append a new course to the end of the list
+enrolled_courses.append("Machine Learning")
+print(f"  After append('Machine Learning'): {enrolled_courses}")
+
+# --- Modification 2: update an existing element by index
+# Replace "Communication" with "Business Communication"
+enrolled_courses[3] = "Business Communication"
+print(f"  After updating index 3     : {enrolled_courses}")
+
+# --- Modification 3: remove an element by value
+enrolled_courses.remove("SQL")
+print(f"  After remove('SQL')        : {enrolled_courses}")
+
+# ----------------------------------------------------------
+# Section 2: Tuple — an ordered, immutable collection
+# ----------------------------------------------------------
+
+# A tuple storing the geographic coordinates (latitude, longitude)
+# of a campus location. Tuples use parentheses () and cannot be modified
+# after creation, making them ideal for fixed, logically grouped values.
+campus_coordinates = (12.9716, 77.5946)
+
+# A second tuple storing the academic term details that should never change.
+academic_term = ("2026", "Spring", "Semester-4")
+
+print("\nSection 2: Tuple")
+print(f"  Campus coordinates tuple   : {campus_coordinates}")
+print(f"  Latitude  (index 0)        : {campus_coordinates[0]}")
+print(f"  Longitude (index 1)        : {campus_coordinates[1]}")
+
+print(f"  Academic term tuple        : {academic_term}")
+print(f"  Year     (index 0)         : {academic_term[0]}")
+print(f"  Season   (index 1)         : {academic_term[1]}")
+print(f"  Semester (index 2)         : {academic_term[2]}")
+
+# Demonstrate immutability of tuples.
+# Attempting to change a tuple element raises a TypeError.
+try:
+    campus_coordinates[0] = 13.0000
+except TypeError as error:
+    print(f"  Tuple immutability check   : {error}")
+
+# ----------------------------------------------------------
+# Section 3: Dictionary — an unordered collection of key-value pairs
+# ----------------------------------------------------------
+
+# A dictionary storing a student's profile. Dictionaries use curly braces {}
+# with key: value pairs. Keys must be unique and immutable (strings, numbers,
+# tuples); values can be any data type.
+student_profile = {
+    "name": "Harsh Singh",
+    "age": 21,
+    "course": "Applied Data Science Foundations",
+    "semester": 4,
+    "city": "Bengaluru",
+    "is_active": True,
+}
+
+print("\nSection 3: Dictionary")
+print(f"  Full student profile       : {student_profile}")
+
+# Access values using keys
+print(f"  name       -> {student_profile['name']}")
+print(f"  age        -> {student_profile['age']}")
+print(f"  course     -> {student_profile['course']}")
+print(f"  semester   -> {student_profile['semester']}")
+print(f"  city       -> {student_profile['city']}")
+print(f"  is_active  -> {student_profile['is_active']}")
+
+# Safe access using the .get() method — returns None (or a default)
+# if the key does not exist, instead of raising a KeyError.
+email_value = student_profile.get("email", "Not provided")
+print(f"  email (via .get)           : {email_value}")
+
+# List all keys and values for completeness
+print(f"  All keys   : {list(student_profile.keys())}")
+print(f"  All values : {list(student_profile.values())}")
+
+# ----------------------------------------------------------
+# Section 4: Consolidated Summary
+# ----------------------------------------------------------
+
+print("\nSection 4: Summary")
+print(f"  Final list of courses   : {enrolled_courses}")
+print(f"  Campus coordinates      : {campus_coordinates}")
+print(f"  Student name from dict  : {student_profile['name']}")
+
+print("\n" + "=" * 55)
+print("  DEMONSTRATION COMPLETE")
+print("=" * 55)
+```
+
+### Explanation of Each Part
+
+#### 1. List
+
+A **list** is an ordered, mutable collection defined using square brackets `[]`. Lists can contain elements of any data type, and their contents can be changed after creation.
+
+- `enrolled_courses` is created with four string elements representing a student's enrolled courses.
+- Elements are accessed by **zero-based index** — `enrolled_courses[0]` returns the first element, and a negative index such as `-1` returns the last element.
+- The script demonstrates three common list modifications:
+  - `append("Machine Learning")` adds a new element to the end.
+  - `enrolled_courses[3] = "Business Communication"` updates an existing element by index.
+  - `remove("SQL")` deletes the first occurrence of the given value.
+- `len(enrolled_courses)` returns the number of elements currently in the list.
+
+#### 2. Tuple
+
+A **tuple** is an ordered, **immutable** collection defined using parentheses `()`. Once created, its contents cannot be modified — making tuples ideal for fixed or logically-grouped values such as geographic coordinates or configuration constants.
+
+- `campus_coordinates = (12.9716, 77.5946)` stores a fixed latitude and longitude pair.
+- `academic_term = ("2026", "Spring", "Semester-4")` stores a fixed three-part academic term identifier.
+- Elements are accessed by index exactly like lists — `campus_coordinates[0]` returns the latitude, and `academic_term[2]` returns the semester.
+- The script includes a `try/except` block that attempts to reassign a tuple element. Python raises a `TypeError` because tuples do not support item assignment, which confirms their immutability.
+
+#### 3. Dictionary
+
+A **dictionary** is a collection of **key-value pairs** defined using curly braces `{}`. Keys must be unique and immutable; values can be any data type. Dictionaries are ideal when each value has a descriptive label.
+
+- `student_profile` uses meaningful keys (`name`, `age`, `course`, `semester`, `city`, `is_active`) to describe a student.
+- Values are accessed using square-bracket key lookup — `student_profile['name']` returns `"Harsh Singh"`.
+- The `.get("email", "Not provided")` method demonstrates safe access: if the key is missing, it returns the provided default instead of raising a `KeyError`.
+- `student_profile.keys()` and `student_profile.values()` return views over all keys and all values respectively, which are then converted to lists for clean printing.
+
+### Sample Output
+
+```
+=======================================================
+  PYTHON COLLECTIONS DEMONSTRATION — LIST, TUPLE, DICT
+=======================================================
+
+Section 1: List
+  Original list              : ['Python', 'Statistics', 'SQL', 'Communication']
+  Total number of courses    : 4
+  First course  (index 0)    : Python
+  Third course  (index 2)    : SQL
+  Last course   (index -1)   : Communication
+  After append('Machine Learning'): ['Python', 'Statistics', 'SQL', 'Communication', 'Machine Learning']
+  After updating index 3     : ['Python', 'Statistics', 'SQL', 'Business Communication', 'Machine Learning']
+  After remove('SQL')        : ['Python', 'Statistics', 'Business Communication', 'Machine Learning']
+
+Section 2: Tuple
+  Campus coordinates tuple   : (12.9716, 77.5946)
+  Latitude  (index 0)        : 12.9716
+  Longitude (index 1)        : 77.5946
+  Academic term tuple        : ('2026', 'Spring', 'Semester-4')
+  Year     (index 0)         : 2026
+  Season   (index 1)         : Spring
+  Semester (index 2)         : Semester-4
+  Tuple immutability check   : 'tuple' object does not support item assignment
+
+Section 3: Dictionary
+  Full student profile       : {'name': 'Harsh Singh', 'age': 21, 'course': 'Applied Data Science Foundations', 'semester': 4, 'city': 'Bengaluru', 'is_active': True}
+  name       -> Harsh Singh
+  age        -> 21
+  course     -> Applied Data Science Foundations
+  semester   -> 4
+  city       -> Bengaluru
+  is_active  -> True
+  email (via .get)           : Not provided
+  All keys   : ['name', 'age', 'course', 'semester', 'city', 'is_active']
+  All values : ['Harsh Singh', 21, 'Applied Data Science Foundations', 4, 'Bengaluru', True]
+
+Section 4: Summary
+  Final list of courses   : ['Python', 'Statistics', 'Business Communication', 'Machine Learning']
+  Campus coordinates      : (12.9716, 77.5946)
+  Student name from dict  : Harsh Singh
+
+=======================================================
+  DEMONSTRATION COMPLETE
+=======================================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `collections_demo.py`.
+
+2. **Verify Python installation**
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python collections_demo.py
+   ```
+   or:
+   ```
+   python3 collections_demo.py
+   ```
+
+5. **Observe the output**
+   The script will print each section's results to the terminal in order.
+
+### Conclusion
+
+This assignment demonstrates confident use of Python's three fundamental collection types. The **list** showed how ordered, mutable sequences support indexing and modification through `append`, index assignment, and `remove`. The **tuple** showed how ordered, immutable sequences are used for fixed grouped values with reliable index access, confirmed by the immutability error. The **dictionary** showed how descriptive keys map to values for clear, self-documenting data structures, with both direct-key access and the safer `.get()` method. Together these three collections form the backbone of data handling in Python and are essential building blocks for all further data analysis work.
 
 ---
 
