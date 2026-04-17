@@ -47,11 +47,11 @@
 | 4.2 | | | | | |
 | 4.3 | | | | | |
 | 4.4 | | | | | |
-| 4.5 | Installing Python and Anaconda on the Local Machine | Bhargav Kalambhe | `Done` | 2026-04-17 | Installed via Anaconda distribution; `(base)` env confirmed |
-| 4.6 | Verifying Python, Conda, and Jupyter Installation | Bhargav Kalambhe | `Done` | 2026-04-17 | All three verified via `--version` and `conda info` commands |
-| 4.7 | Launching Jupyter Notebook and Understanding the Home Interface | Bhargav Kalambhe | `Done` | 2026-04-17 | Launched via `jupyter notebook`; Files / Running / Clusters tabs understood |
-| 4.8 | Understanding Notebook Cells: Code vs Markdown | Bhargav Kalambhe | `Done` | 2026-04-17 | Code cells, Markdown cells, LaTeX rendering, and keyboard shortcuts covered |
-| 4.9 | Running, Restarting, and Interrupting Jupyter Kernels | Bhargav Kalambhe | `Done` | 2026-04-17 | Interrupt, Restart, Restart & Run All — use cases and behaviour documented |
+| 4.5 | Installing Python and Anaconda on the Local Machine | Harsh Singh | `Done` | 2026-04-17 | Installed via Anaconda distribution; `(base)` env confirmed |
+| 4.6 | Verifying Python, Conda, and Jupyter Installation | Harsh Singh | `Done` | 2026-04-17 | All three verified via `--version` and `conda info` commands |
+| 4.7 | Launching Jupyter Notebook and Understanding the Home Interface | Harsh Singh | `Done` | 2026-04-17 | Launched via `jupyter notebook`; Files / Running / Clusters tabs understood |
+| 4.8 | Understanding Notebook Cells: Code vs Markdown | Harsh Singh | `Done` | 2026-04-17 | Code cells, Markdown cells, LaTeX rendering, and keyboard shortcuts covered |
+| 4.9 | Running, Restarting, and Interrupting Jupyter Kernels | Harsh Singh | `Done` | 2026-04-17 | Interrupt, Restart, Restart & Run All — use cases and behaviour documented |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -63,7 +63,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 
 | Date | Author | Update |
 |---|---|---|
-| 2026-04-17 | Bhargav Kalambhe | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
+| 2026-04-17 | Harsh Singh | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
 
 ---
 <!-- END TEMP SECTION -->
@@ -901,7 +901,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- **Team 06**: Harshita Soni (Leader), Harsh Singh, Bhargav Kalambhe
+- **Team 06**: Harshita Soni (Leader), Harsh Singh, Harsh Singh
 - **Sprint**: Module 4 – Sprint #3: Applied Data Science Foundations
 - **Version**: v2.0 (April 2026)
 
