@@ -24,6 +24,7 @@
 - [Assignment 4.16 — Writing Conditional Statements in Python](#assignment-416--writing-conditional-statements-in-python)
 - [Assignment 4.17 — Using for and while Loops for Iterative Processing](#assignment-417--using-for-and-while-loops-for-iterative-processing)
 - [Assignment 4.18 — Defining and Calling Python Functions](#assignment-418--defining-and-calling-python-functions)
+- [Assignment 4.19 — Passing Data into Functions and Returning Results](#assignment-419--passing-data-into-functions-and-returning-results)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -68,6 +69,7 @@
 | 4.16 | Writing Conditional Statements in Python | Harsh Singh | `Done` | 2026-04-18 | Wrote `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else`, and logical operators (`and`, `or`, `not`) with combined parenthesised conditions |
 | 4.17 | Using for and while Loops for Iterative Processing | Harsh Singh | `Done` | 2026-04-18 | Wrote `loops_demo.py` demonstrating `for` loops over lists and ranges, a bounded `while` loop with proper loop-variable updates, and `break`/`continue` with a `while…else` clause |
 | 4.18 | Defining and Calling Python Functions | Harsh Singh | `Done` | 2026-04-18 | Wrote `functions_demo.py` defining four reusable functions with single, multiple, default, and keyword parameters, each called outside its definition and returning a value to the caller |
+| 4.19 | Passing Data into Functions and Returning Results | Harsh Singh | `Done` | 2026-04-18 | Wrote `data_flow_functions.py` demonstrating parameters, `return` values stored in variables, and reuse via printing, further calculation, conditional decisions, and function chaining |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -87,6 +89,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | 2026-04-18 | Harsh Singh | Completed assignment 4.16: Authored `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else` ladders for temperature and grade classification, and logical operators (`and`, `or`, `not`) including a combined parenthesised condition |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.17: Authored `loops_demo.py` demonstrating `for` loops over lists and ranges, a countdown and login-attempt `while` loop with safe termination, and `break`/`continue` usage alongside a `while…else` clause |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.18: Authored `functions_demo.py` defining `greet_user`, `calculate_average`, `calculate_rectangle_area`, and `compute_final_price` — showcasing single/multiple/default parameters, return values, and keyword-argument calls |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.19: Authored `data_flow_functions.py` with `calculate_total`, `apply_discount`, and `calculate_monthly_emi` — demonstrating full data flow (parameters in, `return` out, stored result reused across prints, derived calculations, conditionals, and function chaining) |
 
 ---
 <!-- END TEMP SECTION -->
@@ -1839,6 +1842,274 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates the fundamentals of defining and calling functions in Python. Four small, focused functions illustrate the core concepts: the `def` keyword for definition, parameters for passing input, `return` for sending output back to the caller, and default values and keyword arguments for flexible invocation. By calling each function outside its definition with different arguments, the script confirms that functions are **reusable units of logic** — the central abstraction that makes Python programs modular, readable, and easy to maintain. Mastery of these basics is the foundation for all further work, from data analysis pipelines to production backend systems.
+
+---
+
+## Assignment 4.19 — Passing Data into Functions and Returning Results
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to demonstrate the complete flow of data through a Python function: passing input values via parameters, using those parameters inside the function body to compute a result, returning that result with the `return` statement, storing it in a variable, and then **reusing** that returned value for printing, further calculation, and decision-making in the calling code.
+
+### File Name
+
+`data_flow_functions.py`
+
+### Full Python Script
+
+```python
+# data_flow_functions.py
+# A demonstration script that shows how data flows INTO functions
+# through parameters, how a result is RETURNED via the `return`
+# statement, and how the returned value is STORED in a variable
+# and REUSED in subsequent logic.
+
+print("=" * 55)
+print("  PYTHON FUNCTIONS — DATA IN, RESULT OUT")
+print("=" * 55)
+
+# ----------------------------------------------------------
+# Function 1: calculate_total
+# ----------------------------------------------------------
+# Takes a list of item prices and a tax rate (as a percentage),
+# computes the subtotal and the tax amount, and returns the final
+# total as a single numeric value.
+
+def calculate_total(prices, tax_percent):
+    """Return the final total (subtotal + tax) for a list of item prices."""
+    subtotal = sum(prices)
+    tax_amount = subtotal * (tax_percent / 100)
+    final_total = subtotal + tax_amount
+    return final_total
+
+
+# ----------------------------------------------------------
+# Function 2: apply_discount
+# ----------------------------------------------------------
+# Takes a price and a discount percentage, and returns the
+# discounted price after subtracting the discount amount.
+
+def apply_discount(price, discount_percent):
+    """Return the price after applying the given discount percentage."""
+    discount_amount = price * (discount_percent / 100)
+    discounted_price = price - discount_amount
+    return discounted_price
+
+
+# ----------------------------------------------------------
+# Function 3: calculate_monthly_emi
+# ----------------------------------------------------------
+# Given a loan amount, an annual interest rate (percent), and a
+# duration in months, returns the fixed monthly EMI using the
+# standard EMI formula. Demonstrates multi-parameter input and
+# a meaningful numeric return value.
+
+def calculate_monthly_emi(loan_amount, annual_rate_percent, months):
+    """Return the monthly EMI for a loan using the standard EMI formula."""
+    monthly_rate = (annual_rate_percent / 100) / 12
+    # Handle the zero-interest edge case cleanly.
+    if monthly_rate == 0:
+        return loan_amount / months
+    growth_factor = (1 + monthly_rate) ** months
+    emi = loan_amount * monthly_rate * growth_factor / (growth_factor - 1)
+    return emi
+
+
+# ----------------------------------------------------------
+# Section 1: Pass data in, store the returned value, reuse it
+# ----------------------------------------------------------
+
+print("\nSection 1: calculate_total")
+
+# Input data passed INTO the function as arguments.
+cart_prices = [499, 1299, 250, 799]
+tax_rate = 18  # percent
+
+# Call the function and STORE the returned value in a variable.
+cart_total = calculate_total(cart_prices, tax_rate)
+
+# REUSE the stored value in several ways:
+# (a) print the result with formatting
+print(f"  Cart items   : {cart_prices}")
+print(f"  Tax rate     : {tax_rate}%")
+print(f"  Cart total   : {cart_total:.2f}")
+
+# (b) use the returned value in another calculation
+average_item_cost = cart_total / len(cart_prices)
+print(f"  Avg per item : {average_item_cost:.2f}")
+
+# (c) use the returned value in a conditional decision
+free_shipping_threshold = 2000
+if cart_total >= free_shipping_threshold:
+    print("  Shipping     : FREE (threshold crossed)")
+else:
+    print("  Shipping     : Paid (threshold not crossed)")
+
+# ----------------------------------------------------------
+# Section 2: Chain one function's return value into another
+# ----------------------------------------------------------
+
+print("\nSection 2: apply_discount using Section 1's total")
+
+# Pass the previously returned value (cart_total) as an argument
+# to another function — this is the most direct way to "reuse"
+# a returned value meaningfully.
+discount_percent = 10
+final_payable = apply_discount(cart_total, discount_percent)
+
+print(f"  Original total   : {cart_total:.2f}")
+print(f"  Discount applied : {discount_percent}%")
+print(f"  Final payable    : {final_payable:.2f}")
+
+# Reuse once more — compute how much the customer saved.
+amount_saved = cart_total - final_payable
+print(f"  Amount saved     : {amount_saved:.2f}")
+
+# ----------------------------------------------------------
+# Section 3: Multi-parameter function with returned EMI reused
+# ----------------------------------------------------------
+
+print("\nSection 3: calculate_monthly_emi")
+
+loan_amount = 500000          # principal in rupees
+annual_rate = 9.5             # annual interest rate in percent
+loan_months = 24              # loan duration in months
+
+# Store the returned EMI value.
+monthly_emi = calculate_monthly_emi(loan_amount, annual_rate, loan_months)
+
+# Reuse the returned EMI value for additional reporting.
+total_repayment = monthly_emi * loan_months
+total_interest = total_repayment - loan_amount
+
+print(f"  Loan amount      : {loan_amount}")
+print(f"  Annual interest  : {annual_rate}%")
+print(f"  Loan duration    : {loan_months} months")
+print(f"  Monthly EMI      : {monthly_emi:.2f}")
+print(f"  Total repayment  : {total_repayment:.2f}")
+print(f"  Total interest   : {total_interest:.2f}")
+
+print("\n" + "=" * 55)
+print("  DEMONSTRATION COMPLETE")
+print("=" * 55)
+```
+
+### Explanation
+
+#### 1. Parameters — Passing Data Into the Function
+
+Parameters are the named variables declared in the function header, inside the parentheses of `def`. When the function is called, each argument supplied by the caller is assigned to the corresponding parameter, making it available inside the function body.
+
+- `calculate_total(prices, tax_percent)` accepts two inputs — a list of prices and a tax percentage. The caller passes the actual data as `calculate_total(cart_prices, tax_rate)`.
+- `apply_discount(price, discount_percent)` accepts two numeric inputs representing the base price and the discount rate.
+- `calculate_monthly_emi(loan_amount, annual_rate_percent, months)` accepts three inputs representing the loan parameters.
+
+Parameters make a function **reusable**: the same function can be called again later with different arguments to produce different results, without changing the function body.
+
+#### 2. Return Value — Sending the Result Back
+
+The `return` statement inside a function produces a value and immediately hands control back to the caller. Anything computed inside the function is useless to the rest of the program unless it is either returned or written to an external destination.
+
+- `calculate_total` returns `final_total` — the subtotal plus tax.
+- `apply_discount` returns `discounted_price` — the price after the discount.
+- `calculate_monthly_emi` returns `emi` — the fixed monthly payment.
+
+A function without an explicit `return` implicitly returns `None`, which would make it impossible to reuse its output — so returning a meaningful value is essential for data-flow-oriented code.
+
+#### 3. Variable Storage — Capturing the Returned Value
+
+When a function is called in an expression such as `cart_total = calculate_total(cart_prices, tax_rate)`, the value produced by `return` is **assigned** to a variable in the caller's scope. This variable now holds the result and can be used like any other variable:
+
+```python
+cart_total     = calculate_total(cart_prices, tax_rate)
+final_payable  = apply_discount(cart_total, discount_percent)
+monthly_emi    = calculate_monthly_emi(loan_amount, annual_rate, loan_months)
+```
+
+Storing the return value is what turns a one-shot computation into a piece of data the rest of the program can work with.
+
+#### 4. Reusing the Returned Value
+
+The script demonstrates four common ways to reuse a returned value:
+
+- **Printing** — `print(f"  Cart total   : {cart_total:.2f}")` shows the result to the user in a formatted way.
+- **Further calculation** — `average_item_cost = cart_total / len(cart_prices)` uses the returned total in a follow-up arithmetic expression. Similarly, `total_repayment = monthly_emi * loan_months` multiplies the returned EMI by the duration to derive the total repayment.
+- **Conditional decision** — `if cart_total >= free_shipping_threshold:` uses the returned value to drive control flow, determining whether free shipping applies.
+- **Chaining into another function** — `final_payable = apply_discount(cart_total, discount_percent)` passes the value returned by one function directly as an argument to another. This is the clearest illustration of data flowing through a pipeline of functions.
+
+Together, these patterns show that a function's real power comes not from running in isolation but from producing values that the rest of the program can consume and build on.
+
+### Sample Output
+
+```
+=======================================================
+  PYTHON FUNCTIONS — DATA IN, RESULT OUT
+=======================================================
+
+Section 1: calculate_total
+  Cart items   : [499, 1299, 250, 799]
+  Tax rate     : 18%
+  Cart total   : 3357.82
+  Avg per item : 839.46
+  Shipping     : FREE (threshold crossed)
+
+Section 2: apply_discount using Section 1's total
+  Original total   : 3357.82
+  Discount applied : 10%
+  Final payable    : 3022.04
+  Amount saved     : 335.78
+
+Section 3: calculate_monthly_emi
+  Loan amount      : 500000
+  Annual interest  : 9.5%
+  Loan duration    : 24 months
+  Monthly EMI      : 22992.92
+  Total repayment  : 551830.13
+  Total interest   : 51830.13
+
+=======================================================
+  DEMONSTRATION COMPLETE
+=======================================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `data_flow_functions.py`.
+
+2. **Verify Python installation**
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python data_flow_functions.py
+   ```
+   or:
+   ```
+   python3 data_flow_functions.py
+   ```
+
+5. **Observe the output**
+   The script will print each section's results to the terminal in order.
+
+### Conclusion
+
+This assignment demonstrates the full data-flow cycle of a Python function: **data in, computation inside, result out, value reused**. Parameters carry input values into the function body, the logic inside transforms those inputs, `return` hands the final result back to the caller, and the caller stores that result in a variable to print it, combine it with other computations, drive conditional decisions, or pass it straight into another function. Mastering this flow is fundamental to writing modular, composable Python code and forms the foundation for every pipeline, analysis script, and backend service built later in the program.
 
 ---
 
