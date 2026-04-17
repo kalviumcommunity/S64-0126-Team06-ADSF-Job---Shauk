@@ -21,6 +21,7 @@
 - [Assignment 4.13 — Creating and Running a First Python Script for Data Analysis](#assignment-413--creating-and-running-a-first-python-script-for-data-analysis)
 - [Assignment 4.14 — Understanding Python Numeric and String Data Types](#assignment-414--understanding-python-numeric-and-string-data-types)
 - [Assignment 4.15 — Working with Python Lists, Tuples, and Dictionaries](#assignment-415--working-with-python-lists-tuples-and-dictionaries)
+- [Assignment 4.16 — Writing Conditional Statements in Python](#assignment-416--writing-conditional-statements-in-python)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -62,6 +63,7 @@
 | 4.13 | Creating and Running a First Python Script for Data Analysis | Harsh Singh | `Done` | 2026-04-18 | Wrote `student_marks_analysis.py` demonstrating variables, lists, loops, conditionals, and basic arithmetic with a printed summary report |
 | 4.14 | Understanding Python Numeric and String Data Types | Harsh Singh | `Done` | 2026-04-18 | Wrote `numeric_and_string_types.py` demonstrating int/float/str types, arithmetic, f-string formatting, and explicit type conversion with a type-mismatch example |
 | 4.15 | Working with Python Lists, Tuples, and Dictionaries | Harsh Singh | `Done` | 2026-04-18 | Wrote `collections_demo.py` demonstrating list creation and modification, tuple immutability with indexed access, and dictionary key-based access with `.get()` safety |
+| 4.16 | Writing Conditional Statements in Python | Harsh Singh | `Done` | 2026-04-18 | Wrote `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else`, and logical operators (`and`, `or`, `not`) with combined parenthesised conditions |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -78,6 +80,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | 2026-04-18 | Harsh Singh | Completed assignment 4.13: Authored and executed `student_marks_analysis.py` — a first Python script demonstrating variables, lists, a loop, a conditional, basic arithmetic, and a formatted console summary report |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.14: Authored `numeric_and_string_types.py` demonstrating integer/float/string variables, arithmetic, concatenation, f-string formatting, and a type-mismatch example fixed via `str()`, `int()`, and `float()` conversions |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.15: Authored `collections_demo.py` demonstrating Python lists (append/update/remove), tuples (indexed access and immutability check), and dictionaries (key-based access and `.get()` safe lookup) |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.16: Authored `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else` ladders for temperature and grade classification, and logical operators (`and`, `or`, `not`) including a combined parenthesised condition |
 
 ---
 <!-- END TEMP SECTION -->
@@ -1088,6 +1091,263 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates confident use of Python's three fundamental collection types. The **list** showed how ordered, mutable sequences support indexing and modification through `append`, index assignment, and `remove`. The **tuple** showed how ordered, immutable sequences are used for fixed grouped values with reliable index access, confirmed by the immutability error. The **dictionary** showed how descriptive keys map to values for clear, self-documenting data structures, with both direct-key access and the safer `.get()` method. Together these three collections form the backbone of data handling in Python and are essential building blocks for all further data analysis work.
+
+---
+
+## Assignment 4.16 — Writing Conditional Statements in Python
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to develop a clear and correct understanding of Python's conditional statements by writing a simple script that demonstrates a basic `if` check, an `if-else` decision branch, an `if-elif-else` structure with multiple branches, and the use of logical operators (`and`, `or`, `not`) to combine conditions.
+
+### File Name
+
+`conditional_statements.py`
+
+### Full Python Script
+
+```python
+# conditional_statements.py
+# A demonstration script that explores Python's conditional statements:
+# basic if, if-else, if-elif-else, and logical operators (and, or, not).
+
+print("=" * 55)
+print("  PYTHON CONDITIONAL STATEMENTS DEMONSTRATION")
+print("=" * 55)
+
+# ----------------------------------------------------------
+# Section 1: Basic if statement
+# ----------------------------------------------------------
+# A simple if statement executes a block of code only when
+# its condition evaluates to True.
+
+marks = 75
+print("\nSection 1: Basic if statement")
+print(f"  marks = {marks}")
+
+# Check whether the student has scored above the passing threshold.
+if marks >= 40:
+    print("  Result: The student has passed the examination.")
+
+# ----------------------------------------------------------
+# Section 2: if-else statement
+# ----------------------------------------------------------
+# An if-else provides two mutually exclusive branches:
+# one runs when the condition is True, the other when it is False.
+
+age = 16
+print("\nSection 2: if-else statement")
+print(f"  age = {age}")
+
+# Check whether the person is eligible to vote in India (age >= 18).
+if age >= 18:
+    print("  Result: The person is eligible to vote.")
+else:
+    print("  Result: The person is NOT eligible to vote yet.")
+
+# ----------------------------------------------------------
+# Section 3: if-elif-else with multiple conditions
+# ----------------------------------------------------------
+# An if-elif-else ladder lets the program choose between
+# more than two possible outcomes. Conditions are checked
+# in order, and only the first matching branch runs.
+
+temperature = 28
+print("\nSection 3: if-elif-else statement")
+print(f"  temperature = {temperature} degrees Celsius")
+
+# Classify the weather based on the temperature value.
+if temperature >= 35:
+    weather_status = "Very hot — stay hydrated and avoid direct sun."
+elif temperature >= 25:
+    weather_status = "Warm — a pleasant day outside."
+elif temperature >= 15:
+    weather_status = "Cool — a light jacket may be comfortable."
+else:
+    weather_status = "Cold — wear warm clothing."
+
+print(f"  Result: {weather_status}")
+
+# Another if-elif-else ladder: assign a grade based on marks.
+score = 82
+print(f"\n  score = {score}")
+
+if score >= 90:
+    grade = "A"
+elif score >= 75:
+    grade = "B"
+elif score >= 60:
+    grade = "C"
+elif score >= 40:
+    grade = "D"
+else:
+    grade = "F"
+
+print(f"  Result: Grade assigned = {grade}")
+
+# ----------------------------------------------------------
+# Section 4: Logical operators (and, or, not)
+# ----------------------------------------------------------
+# Logical operators combine multiple conditions:
+#   and -> True only if BOTH conditions are True
+#   or  -> True if AT LEAST ONE condition is True
+#   not -> Inverts the truth value of a condition
+
+print("\nSection 4: Logical operators")
+
+# Example 1: 'and' operator
+# A candidate qualifies for an internship only if they are at least
+# 18 years old AND have scored 60 or above.
+candidate_age = 20
+candidate_score = 72
+print(f"  candidate_age = {candidate_age}, candidate_score = {candidate_score}")
+
+if candidate_age >= 18 and candidate_score >= 60:
+    print("  Using 'and': Candidate qualifies for the internship.")
+else:
+    print("  Using 'and': Candidate does NOT qualify for the internship.")
+
+# Example 2: 'or' operator
+# A user gets a discount if they are either a student OR a senior citizen.
+is_student = True
+is_senior_citizen = False
+print(f"  is_student = {is_student}, is_senior_citizen = {is_senior_citizen}")
+
+if is_student or is_senior_citizen:
+    print("  Using 'or' : Discount applied to the purchase.")
+else:
+    print("  Using 'or' : No discount available for this user.")
+
+# Example 3: 'not' operator
+# Check whether a user is NOT logged in and prompt accordingly.
+is_logged_in = False
+print(f"  is_logged_in = {is_logged_in}")
+
+if not is_logged_in:
+    print("  Using 'not': Please log in to continue.")
+else:
+    print("  Using 'not': Welcome back, you are already logged in.")
+
+# Example 4: Combining logical operators in one condition
+# A person can enter a premium lounge only if they have a valid ticket
+# AND (are a member OR have a VIP pass).
+has_ticket = True
+is_member = False
+has_vip_pass = True
+print(f"  has_ticket = {has_ticket}, is_member = {is_member}, has_vip_pass = {has_vip_pass}")
+
+if has_ticket and (is_member or has_vip_pass):
+    print("  Combined  : Access granted to the premium lounge.")
+else:
+    print("  Combined  : Access denied to the premium lounge.")
+
+print("\n" + "=" * 55)
+print("  DEMONSTRATION COMPLETE")
+print("=" * 55)
+```
+
+### Explanation of Each Part
+
+#### 1. Basic `if`
+
+A **basic `if`** statement evaluates a single condition and runs the indented block only when that condition is `True`. In the script, `marks = 75` is checked against the passing threshold `marks >= 40`. Because the condition is true, the message confirming a pass is printed. If the condition were false, no output would be produced from this block — there is no alternative branch.
+
+#### 2. `if-else`
+
+An **`if-else`** statement provides two mutually exclusive outcomes: the `if` block runs when the condition is true, and the `else` block runs in every other case. The script sets `age = 16` and checks `age >= 18` to decide voting eligibility. Since 16 is less than 18, the condition is false and the `else` branch is executed, producing the "not eligible" message.
+
+#### 3. `if-elif-else`
+
+An **`if-elif-else`** ladder extends the decision to more than two outcomes. Python evaluates the conditions in order and executes only the first branch whose condition is true; the remaining branches are skipped. The `else` at the end is a catch-all for the case where no prior condition matched.
+
+The script demonstrates this twice:
+- **Temperature classification** — `temperature = 28` is classified as *Warm* because the first matching branch is `temperature >= 25`.
+- **Grade assignment** — `score = 82` is graded **B** because the first matching branch is `score >= 75`.
+
+#### 4. Logical Operators (`and`, `or`, `not`)
+
+Logical operators combine or invert Boolean expressions so that a single `if` statement can evaluate multiple conditions together:
+
+- **`and`** — returns `True` only if **both** conditions are true. The internship eligibility check `candidate_age >= 18 and candidate_score >= 60` requires both to hold.
+- **`or`** — returns `True` if **at least one** condition is true. The discount rule `is_student or is_senior_citizen` triggers as long as either flag is true.
+- **`not`** — inverts a Boolean value. `not is_logged_in` is `True` when `is_logged_in` is `False`, prompting the user to log in.
+- **Combined** — operators can be chained with parentheses to control precedence, as in `has_ticket and (is_member or has_vip_pass)`. Parentheses make the logic explicit and readable, ensuring the `or` is evaluated before the `and`.
+
+### Sample Output
+
+```
+=======================================================
+  PYTHON CONDITIONAL STATEMENTS DEMONSTRATION
+=======================================================
+
+Section 1: Basic if statement
+  marks = 75
+  Result: The student has passed the examination.
+
+Section 2: if-else statement
+  age = 16
+  Result: The person is NOT eligible to vote yet.
+
+Section 3: if-elif-else statement
+  temperature = 28 degrees Celsius
+  Result: Warm — a pleasant day outside.
+
+  score = 82
+  Result: Grade assigned = B
+
+Section 4: Logical operators
+  candidate_age = 20, candidate_score = 72
+  Using 'and': Candidate qualifies for the internship.
+  is_student = True, is_senior_citizen = False
+  Using 'or' : Discount applied to the purchase.
+  is_logged_in = False
+  Using 'not': Please log in to continue.
+  has_ticket = True, is_member = False, has_vip_pass = True
+  Combined  : Access granted to the premium lounge.
+
+=======================================================
+  DEMONSTRATION COMPLETE
+=======================================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `conditional_statements.py`.
+
+2. **Verify Python installation**
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python conditional_statements.py
+   ```
+   or:
+   ```
+   python3 conditional_statements.py
+   ```
+
+5. **Observe the output**
+   The script will print each section's decision outcomes to the terminal in order.
+
+### Conclusion
+
+This assignment demonstrates correct and confident use of Python's conditional constructs. The **basic `if`** handles single-condition checks, the **`if-else`** cleanly separates two mutually exclusive outcomes, and the **`if-elif-else`** ladder selects between multiple branches in a readable, top-down order. The logical operators **`and`**, **`or`**, and **`not`** — along with parenthesized combinations — show how multiple conditions can be expressed in a single, clear decision statement. Together these constructs form the decision-making backbone of any Python program and are essential for controlling program flow in real-world data analysis and application logic.
 
 ---
 
