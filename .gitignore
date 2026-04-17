@@ -3,3 +3,18 @@ design.md
 requirements.md
 tasks.md
 .env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Generated outputs — recreated by notebooks
+outputs/figures/*.png
+data/processed/*.csv
+
+# OS artefacts
+.DS_Store
+Thumbs.db
