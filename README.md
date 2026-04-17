@@ -23,6 +23,7 @@
 - [Assignment 4.15 — Working with Python Lists, Tuples, and Dictionaries](#assignment-415--working-with-python-lists-tuples-and-dictionaries)
 - [Assignment 4.16 — Writing Conditional Statements in Python](#assignment-416--writing-conditional-statements-in-python)
 - [Assignment 4.17 — Using for and while Loops for Iterative Processing](#assignment-417--using-for-and-while-loops-for-iterative-processing)
+- [Assignment 4.18 — Defining and Calling Python Functions](#assignment-418--defining-and-calling-python-functions)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -66,6 +67,7 @@
 | 4.15 | Working with Python Lists, Tuples, and Dictionaries | Harsh Singh | `Done` | 2026-04-18 | Wrote `collections_demo.py` demonstrating list creation and modification, tuple immutability with indexed access, and dictionary key-based access with `.get()` safety |
 | 4.16 | Writing Conditional Statements in Python | Harsh Singh | `Done` | 2026-04-18 | Wrote `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else`, and logical operators (`and`, `or`, `not`) with combined parenthesised conditions |
 | 4.17 | Using for and while Loops for Iterative Processing | Harsh Singh | `Done` | 2026-04-18 | Wrote `loops_demo.py` demonstrating `for` loops over lists and ranges, a bounded `while` loop with proper loop-variable updates, and `break`/`continue` with a `while…else` clause |
+| 4.18 | Defining and Calling Python Functions | Harsh Singh | `Done` | 2026-04-18 | Wrote `functions_demo.py` defining four reusable functions with single, multiple, default, and keyword parameters, each called outside its definition and returning a value to the caller |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -84,6 +86,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | 2026-04-18 | Harsh Singh | Completed assignment 4.15: Authored `collections_demo.py` demonstrating Python lists (append/update/remove), tuples (indexed access and immutability check), and dictionaries (key-based access and `.get()` safe lookup) |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.16: Authored `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else` ladders for temperature and grade classification, and logical operators (`and`, `or`, `not`) including a combined parenthesised condition |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.17: Authored `loops_demo.py` demonstrating `for` loops over lists and ranges, a countdown and login-attempt `while` loop with safe termination, and `break`/`continue` usage alongside a `while…else` clause |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.18: Authored `functions_demo.py` defining `greet_user`, `calculate_average`, `calculate_rectangle_area`, and `compute_final_price` — showcasing single/multiple/default parameters, return values, and keyword-argument calls |
 
 ---
 <!-- END TEMP SECTION -->
@@ -1602,6 +1605,240 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates safe and correct use of Python's iterative constructs. The **`for` loop** cleanly walks through sequences such as lists and ranges, relying on Python's iterator protocol to avoid manual index management. The **`while` loop** illustrates the importance of a clear termination condition and a properly updated loop variable, which together prevent infinite loops. The **`break`** and **`continue`** statements show how to exit a loop early or skip selected iterations, while the optional **`while…else`** clause offers an elegant way to distinguish "loop completed normally" from "loop exited by `break`". Together these constructs form the foundation of iterative processing in Python and are essential tools for any data analysis or backend engineering task.
+
+---
+
+## Assignment 4.18 — Defining and Calling Python Functions
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to develop a clear understanding of how functions work in Python by writing a simple script that defines reusable functions with one or more parameters, calls those functions from outside their definitions with different arguments, and prints the values returned by each call. The assignment focuses on clean function design, parameter passing, and return-value handling.
+
+### File Name
+
+`functions_demo.py`
+
+### Full Python Script
+
+```python
+# functions_demo.py
+# A demonstration script that explores how to define and call functions
+# in Python. It shows functions with single and multiple parameters,
+# default arguments, and return values used by the calling code.
+
+print("=" * 55)
+print("  PYTHON FUNCTIONS DEMONSTRATION")
+print("=" * 55)
+
+# ----------------------------------------------------------
+# Function 1: greet_user
+# ----------------------------------------------------------
+# A simple function that accepts a single parameter (user_name)
+# and returns a personalized greeting string.
+
+def greet_user(user_name):
+    """Return a personalized greeting message for the given user."""
+    message = f"Hello, {user_name}! Welcome to the Python functions demo."
+    return message
+
+
+# ----------------------------------------------------------
+# Function 2: calculate_average
+# ----------------------------------------------------------
+# A function that accepts a list of numeric values and returns
+# their average. It uses built-in sum() and len() for clarity.
+
+def calculate_average(numbers):
+    """Return the arithmetic mean of a list of numbers.
+
+    If the list is empty, return 0.0 to avoid a division-by-zero error.
+    """
+    if len(numbers) == 0:
+        return 0.0
+    total = sum(numbers)
+    count = len(numbers)
+    average = total / count
+    return average
+
+
+# ----------------------------------------------------------
+# Function 3: calculate_rectangle_area
+# ----------------------------------------------------------
+# A function that accepts two parameters (length and width) and
+# returns the area of a rectangle. Demonstrates multi-parameter use.
+
+def calculate_rectangle_area(length, width):
+    """Return the area of a rectangle given its length and width."""
+    area = length * width
+    return area
+
+
+# ----------------------------------------------------------
+# Function 4: compute_final_price
+# ----------------------------------------------------------
+# A function that accepts a base price and an optional discount
+# percentage (default = 0). Demonstrates the use of default
+# parameter values so the caller can omit the second argument.
+
+def compute_final_price(base_price, discount_percent=0):
+    """Return the final price after applying the given discount percentage."""
+    discount_amount = base_price * (discount_percent / 100)
+    final_price = base_price - discount_amount
+    return final_price
+
+
+# ----------------------------------------------------------
+# Calling the functions (outside their definitions)
+# ----------------------------------------------------------
+# The function definitions above are just blueprints — they do not
+# run until they are explicitly called with appropriate arguments.
+
+print("\nSection 1: greet_user")
+greeting_message = greet_user("Harsh")
+print(f"  {greeting_message}")
+
+print("\nSection 2: calculate_average")
+student_marks = [78, 85, 92, 67, 74]
+average_marks = calculate_average(student_marks)
+print(f"  Marks list      : {student_marks}")
+print(f"  Average marks   : {average_marks:.2f}")
+
+print("\nSection 3: calculate_rectangle_area")
+rectangle_length = 12
+rectangle_width = 5
+rectangle_area = calculate_rectangle_area(rectangle_length, rectangle_width)
+print(f"  Length          : {rectangle_length}")
+print(f"  Width           : {rectangle_width}")
+print(f"  Area            : {rectangle_area}")
+
+print("\nSection 4: compute_final_price")
+# Call 1: use the default discount (0%)
+price_no_discount = compute_final_price(1500)
+print(f"  Base price 1500, no discount       -> Final price: {price_no_discount}")
+
+# Call 2: provide an explicit discount percentage
+price_with_discount = compute_final_price(1500, 20)
+print(f"  Base price 1500, discount 20%      -> Final price: {price_with_discount}")
+
+# Call 3: use keyword arguments for readability
+price_with_keyword = compute_final_price(base_price=2400, discount_percent=15)
+print(f"  Base price 2400, discount 15% (kw) -> Final price: {price_with_keyword}")
+
+print("\n" + "=" * 55)
+print("  DEMONSTRATION COMPLETE")
+print("=" * 55)
+```
+
+### Explanation
+
+#### 1. Function Definition
+
+A function in Python is defined using the `def` keyword followed by the function name, a parameter list in parentheses, and a colon. The indented block beneath the header is the function body, which contains the logic to be executed when the function is called.
+
+The script defines four functions:
+- `greet_user(user_name)` — returns a personalized greeting string.
+- `calculate_average(numbers)` — returns the arithmetic mean of a list of numbers.
+- `calculate_rectangle_area(length, width)` — returns the area of a rectangle.
+- `compute_final_price(base_price, discount_percent=0)` — returns the final price after an optional discount.
+
+Each function has a **docstring** — a triple-quoted string placed immediately after the `def` line — which documents what the function does. Docstrings are accessible via the built-in `help()` function and make code self-documenting.
+
+#### 2. Parameters
+
+**Parameters** are the named variables listed in the function definition that receive values when the function is called. The script illustrates three common patterns:
+
+- **Single parameter** — `greet_user(user_name)` takes exactly one value.
+- **Multiple parameters** — `calculate_rectangle_area(length, width)` takes two positional values.
+- **Default parameter** — `compute_final_price(base_price, discount_percent=0)` provides a fallback value for `discount_percent`, so the caller may omit it.
+
+When calling a function, the values passed in are called **arguments**. Arguments can be passed positionally (`compute_final_price(1500, 20)`) or by name using **keyword arguments** (`compute_final_price(base_price=2400, discount_percent=15)`). Keyword arguments improve readability, especially when a function has many parameters.
+
+#### 3. Function Call
+
+A function runs only when it is **called** (also called *invoked*) with appropriate arguments. The call syntax is the function name followed by parentheses containing the arguments. All four function calls in the script are made **outside** their respective function definitions, confirming that the functions are independent, reusable building blocks:
+
+```python
+greeting_message = greet_user("Harsh")
+average_marks   = calculate_average(student_marks)
+rectangle_area  = calculate_rectangle_area(12, 5)
+price_with_kw   = compute_final_price(base_price=2400, discount_percent=15)
+```
+
+Each call can be repeated any number of times with different arguments — this is exactly what makes functions *reusable*.
+
+#### 4. Output
+
+Each function uses the `return` statement to send a value back to the caller. The returned value is stored in a variable (e.g., `greeting_message`, `average_marks`) and then printed. This separation between **computing a value** and **displaying it** is a good practice: it keeps the function focused on one job and allows the caller to use the result however it wants — print it, pass it to another function, or store it in a data structure.
+
+Formatted string literals (`f"..."`) are used in the calling code to display each result clearly, with appropriate labels and numeric precision (`{average_marks:.2f}` rounds the average to two decimal places).
+
+### Sample Output
+
+```
+=======================================================
+  PYTHON FUNCTIONS DEMONSTRATION
+=======================================================
+
+Section 1: greet_user
+  Hello, Harsh! Welcome to the Python functions demo.
+
+Section 2: calculate_average
+  Marks list      : [78, 85, 92, 67, 74]
+  Average marks   : 79.20
+
+Section 3: calculate_rectangle_area
+  Length          : 12
+  Width           : 5
+  Area            : 60
+
+Section 4: compute_final_price
+  Base price 1500, no discount       -> Final price: 1500.0
+  Base price 1500, discount 20%      -> Final price: 1200.0
+  Base price 2400, discount 15% (kw) -> Final price: 2040.0
+
+=======================================================
+  DEMONSTRATION COMPLETE
+=======================================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `functions_demo.py`.
+
+2. **Verify Python installation**
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python functions_demo.py
+   ```
+   or:
+   ```
+   python3 functions_demo.py
+   ```
+
+5. **Observe the output**
+   The script will print each function's result to the terminal in order.
+
+### Conclusion
+
+This assignment demonstrates the fundamentals of defining and calling functions in Python. Four small, focused functions illustrate the core concepts: the `def` keyword for definition, parameters for passing input, `return` for sending output back to the caller, and default values and keyword arguments for flexible invocation. By calling each function outside its definition with different arguments, the script confirms that functions are **reusable units of logic** — the central abstraction that makes Python programs modular, readable, and easy to maintain. Mastery of these basics is the foundation for all further work, from data analysis pipelines to production backend systems.
 
 ---
 
