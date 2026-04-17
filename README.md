@@ -18,6 +18,7 @@
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Repository Understanding Milestone](#repository-understanding-milestone)
 - [Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts](#assignment-412--organizing-raw-data-processed-data-and-output-artifacts)
+- [Assignment 4.13 — Creating and Running a First Python Script for Data Analysis](#assignment-413--creating-and-running-a-first-python-script-for-data-analysis)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -56,6 +57,7 @@
 | 4.10 | | | | | |
 | 4.11 | | | | | |
 | 4.12 | Organizing Raw Data, Processed Data, and Output Artifacts | Harsh Singh | `Done` | 2026-04-17 | Folder structure, data lifecycle, naming conventions, and best practices documented |
+| 4.13 | Creating and Running a First Python Script for Data Analysis | Harsh Singh | `Done` | 2026-04-18 | Wrote `student_marks_analysis.py` demonstrating variables, lists, loops, conditionals, and basic arithmetic with a printed summary report |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -69,6 +71,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 |---|---|---|
 | 2026-04-17 | Harsh Singh | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
 | 2026-04-17 | Harsh Singh | Completed assignment 4.12: Documented data organization strategy — raw/processed/outputs folder structure, data lifecycle, naming conventions, and best practices |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.13: Authored and executed `student_marks_analysis.py` — a first Python script demonstrating variables, lists, a loop, a conditional, basic arithmetic, and a formatted console summary report |
 
 ---
 <!-- END TEMP SECTION -->
@@ -380,6 +383,178 @@ When multiple engineers are working on a pipeline, filenames must communicate in
 Clean data organization is not a cosmetic concern — it is a structural requirement for any pipeline that needs to be debugged, extended, or handed to another engineer. The separation of `raw/`, `processed/`, and `outputs/` enforces the principle that each stage of the data lifecycle has a distinct role: raw data is the immutable source of truth, processed data is a derived and reproducible intermediate, and outputs are the final deliverables.
 
 Consistent naming conventions make the state and scope of every file visible without opening it. Combined, these practices reduce the time spent debugging data issues, lower the risk of introducing errors during collaboration, and make the pipeline auditable from ingestion to final report.
+
+---
+
+## Assignment 4.13 — Creating and Running a First Python Script for Data Analysis
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to create and execute a simple Python script that demonstrates fundamental scripting concepts — variables, lists, loops, conditionals, and basic arithmetic operations — by performing elementary data analysis on a list of student marks and printing a clean summary report to the console.
+
+### Script Name
+
+`student_marks_analysis.py`
+
+### Full Python Script
+
+```python
+# student_marks_analysis.py
+# A simple Python script that analyzes a list of student marks
+# and prints a summary report to the console.
+
+# Step 1: Define the input data
+# A list containing marks scored by students in a subject (out of 100)
+student_names = ["Aarav", "Priya", "Rohan", "Isha", "Karan", "Meera", "Vikram", "Neha"]
+student_marks = [78, 45, 88, 32, 67, 91, 54, 39]
+
+# Step 2: Define the passing criteria
+passing_mark = 40
+
+# Step 3: Initialize counters and accumulators
+total_marks = 0
+passed_count = 0
+failed_count = 0
+highest_mark = student_marks[0]
+lowest_mark = student_marks[0]
+
+# Step 4: Loop through the marks to perform calculations
+for mark in student_marks:
+    # Accumulate the total marks
+    total_marks += mark
+
+    # Conditional: count passed and failed students
+    if mark >= passing_mark:
+        passed_count += 1
+    else:
+        failed_count += 1
+
+    # Track the highest and lowest marks
+    if mark > highest_mark:
+        highest_mark = mark
+    if mark < lowest_mark:
+        lowest_mark = mark
+
+# Step 5: Calculate the average marks
+total_students = len(student_marks)
+average_marks = total_marks / total_students
+
+# Step 6: Print the summary report
+print("=" * 45)
+print("       STUDENT MARKS ANALYSIS REPORT")
+print("=" * 45)
+
+# Print individual student results using a loop
+print("\nIndividual Results:")
+for index in range(total_students):
+    name = student_names[index]
+    mark = student_marks[index]
+    status = "PASS" if mark >= passing_mark else "FAIL"
+    print(f"  {name:<10} : {mark:>3}  -->  {status}")
+
+# Print overall statistics
+print("\nOverall Statistics:")
+print(f"  Total Students     : {total_students}")
+print(f"  Total Marks        : {total_marks}")
+print(f"  Average Marks      : {average_marks:.2f}")
+print(f"  Highest Mark       : {highest_mark}")
+print(f"  Lowest Mark        : {lowest_mark}")
+print(f"  Students Passed    : {passed_count}")
+print(f"  Students Failed    : {failed_count}")
+
+# Step 7: Print a final remark based on class performance
+print("\nClass Performance:")
+if average_marks >= 75:
+    print("  Excellent performance by the class.")
+elif average_marks >= 50:
+    print("  Good performance, but there is room for improvement.")
+else:
+    print("  The class needs significant improvement.")
+
+print("=" * 45)
+```
+
+### Explanation of What the Script Does
+
+The script performs a basic analysis of student marks and prints a clear summary report. Its working can be broken down as follows:
+
+1. **Data Definition** — Two parallel lists are created, one holding student names and the other their corresponding marks.
+2. **Initialization** — Counter variables (`total_marks`, `passed_count`, `failed_count`) and tracker variables (`highest_mark`, `lowest_mark`) are initialized.
+3. **Loop & Conditional** — A `for` loop iterates over each mark. Inside the loop, an `if-else` statement checks whether each student has passed or failed, and additional conditionals update the highest and lowest marks.
+4. **Calculations** — The average is computed by dividing the total marks by the number of students.
+5. **Output** — The script prints each student's result along with a PASS/FAIL status, followed by overall statistics such as total, average, highest, lowest, and the pass/fail counts.
+6. **Final Remark** — A concluding conditional evaluates the average marks and prints an overall class performance comment.
+
+### Sample Output
+
+```
+=============================================
+       STUDENT MARKS ANALYSIS REPORT
+=============================================
+
+Individual Results:
+  Aarav      :  78  -->  PASS
+  Priya      :  45  -->  PASS
+  Rohan      :  88  -->  PASS
+  Isha       :  32  -->  FAIL
+  Karan      :  67  -->  PASS
+  Meera      :  91  -->  PASS
+  Vikram     :  54  -->  PASS
+  Neha       :  39  -->  FAIL
+
+Overall Statistics:
+  Total Students     : 8
+  Total Marks        : 494
+  Average Marks      : 61.75
+  Highest Mark       : 91
+  Lowest Mark        : 32
+  Students Passed    : 6
+  Students Failed    : 2
+
+Class Performance:
+  Good performance, but there is room for improvement.
+=============================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `student_marks_analysis.py` in a directory of your choice.
+
+2. **Verify Python installation**
+   Make sure Python 3 is installed by running:
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python student_marks_analysis.py
+   ```
+   or:
+   ```
+   python3 student_marks_analysis.py
+   ```
+
+5. **View the output**
+   The summary report will be displayed directly in the terminal.
+
+### Conclusion
+
+This assignment demonstrates the ability to create and run a basic Python script for simple data analysis. Using only core language features — variables, lists, loops, conditionals, and arithmetic operations — the script successfully analyzes a small dataset of student marks and produces a clean, meaningful summary in the console. It confirms a solid understanding of Python fundamentals and the script execution workflow, laying the foundation for more advanced data analysis tasks in the future.
 
 ---
 
