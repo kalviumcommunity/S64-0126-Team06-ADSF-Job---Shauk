@@ -14,6 +14,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -48,6 +49,78 @@ Every pipeline stage is oriented toward answering this question with statistical
 - **Demand-Supply Analysis**: Joins job postings with candidate outcomes to compute market dynamics
 - **Reproducibility**: Run manifests track git SHA, config hashes, and data hashes for bit-level reproducibility
 - **Production-Ready**: CI/CD pipeline, property-based testing, structured logging, and modular architecture
+
+---
+
+## Question Data Insight Lifecycle Assignment
+
+### 1) Explaining the Lifecycle: Question -> Data -> Insight
+
+Data science starts with a **question**, not with a dashboard or a model.
+A clear question defines the decision we want to support, the scope of the work, and what success looks like. Without this step, teams can produce technically correct analysis that answers the wrong problem.
+
+In this project, a focused question is:
+**"Which skills show strong market demand, and which skill combinations are linked with higher placement outcomes?"**
+
+That question determines:
+- what data we should collect,
+- how we clean and structure it,
+- which metrics are meaningful,
+- and how we interpret the results.
+
+The next stage is **data as evidence**. Data is not automatically useful just because we have it.
+Before analysis, we need to understand:
+- what each field actually means,
+- how and when the data was collected,
+- where values are missing or biased,
+- and whether sources can be fairly compared.
+
+For example, if job postings list skills in free text but outcome data uses different naming styles, we cannot compare demand and placement reliably until skills are standardized. So understanding data quality and context is part of the core reasoning, not a side task.
+
+Finally, **insight** emerges from exploration plus interpretation.
+Insight is not only "Python appears many times." Insight is "Python demand is high, supply is lower in some sectors, and its placement lift stays above baseline even after controlling for experience." That type of insight is decision-ready because it explains what action to take and why.
+
+How the lifecycle connects:
+- A precise question tells us what evidence matters.
+- Data understanding makes that evidence trustworthy.
+- Exploration turns trustworthy evidence into useful decisions.
+
+### 2) Applying the Lifecycle to a Project Context
+
+#### Project Context
+An employability training institute wants to redesign its next 6-month analytics bootcamp to improve student placement outcomes.
+
+#### Question to Answer
+**"Which 8-10 skills should be prioritized so graduates are more likely to be placed within 90 days?"**
+
+#### Data Needed
+- **Job demand data** from job boards and company postings:
+  - required skills,
+  - role titles,
+  - sector,
+  - experience expectations,
+  - posting date.
+- **Candidate outcome data** from institute records:
+  - student skill profiles,
+  - project background,
+  - placement status,
+  - time-to-placement,
+  - offered salary.
+- **Optional validation data** from recruiter feedback:
+  - whether trained skills match real hiring needs.
+
+This data represents both sides of the same labor market:
+- employer demand (what companies ask for),
+- learner outcomes (what leads to placement success).
+
+#### Useful Decision-Making Insight
+A useful insight would be:
+**"Learners with Python + SQL + dashboarding skills have consistently higher placement probability across sectors, while some high-frequency skills add little marginal placement value."**
+
+This supports concrete decisions:
+- prioritize high-impact skill bundles,
+- reduce low-impact content,
+- align curriculum with measurable hiring demand.
 
 ---
 
