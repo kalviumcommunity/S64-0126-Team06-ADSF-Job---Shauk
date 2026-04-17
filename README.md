@@ -17,6 +17,7 @@
 - [Overview](#overview)
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Repository Understanding Milestone](#repository-understanding-milestone)
+- [Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts](#assignment-412--organizing-raw-data-processed-data-and-output-artifacts)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -52,6 +53,9 @@
 | 4.7 | Launching Jupyter Notebook and Understanding the Home Interface | Harsh Singh | `Done` | 2026-04-17 | Launched via `jupyter notebook`; Files / Running / Clusters tabs understood |
 | 4.8 | Understanding Notebook Cells: Code vs Markdown | Harsh Singh | `Done` | 2026-04-17 | Code cells, Markdown cells, LaTeX rendering, and keyboard shortcuts covered |
 | 4.9 | Running, Restarting, and Interrupting Jupyter Kernels | Harsh Singh | `Done` | 2026-04-17 | Interrupt, Restart, Restart & Run All — use cases and behaviour documented |
+| 4.10 | | | | | |
+| 4.11 | | | | | |
+| 4.12 | Organizing Raw Data, Processed Data, and Output Artifacts | Harsh Singh | `Done` | 2026-04-17 | Folder structure, data lifecycle, naming conventions, and best practices documented |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -64,6 +68,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | Date | Author | Update |
 |---|---|---|
 | 2026-04-17 | Harsh Singh | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
+| 2026-04-17 | Harsh Singh | Completed assignment 4.12: Documented data organization strategy — raw/processed/outputs folder structure, data lifecycle, naming conventions, and best practices |
 
 ---
 <!-- END TEMP SECTION -->
@@ -223,9 +228,164 @@ This would reduce onboarding time and lower risk of accidental breakage for firs
 
 ---
 
+## Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to demonstrate a clean, reproducible folder structure for managing data at different stages of a pipeline — from ingestion to processing to final output. Proper organization reduces errors, enables collaboration, and makes pipelines debuggable and auditable.
+
+### Folder Structure
+
+```
+sales-pipeline/
+│
+├── data/
+│   ├── raw/
+│   │   ├── sales_2024_q1_raw.csv
+│   │   ├── sales_2024_q2_raw.csv
+│   │   └── customers_2024_raw.csv
+│   │
+│   └── processed/
+│       ├── sales_2024_q1_cleaned.csv
+│       ├── sales_2024_q2_cleaned.csv
+│       └── customers_2024_cleaned.csv
+│
+├── outputs/
+│   ├── figures/
+│   │   ├── sales_trend_q1_q2_bar.png
+│   │   └── customer_region_distribution_pie.png
+│   │
+│   └── reports/
+│       ├── sales_summary_2024_q1.pdf
+│       └── pipeline_run_log_2024-04-17.txt
+│
+├── scripts/
+│   ├── 01_ingest.py
+│   ├── 02_clean.py
+│   └── 03_export.py
+│
+├── README.md
+└── requirements.txt
+```
+
+### Explanation of Each Folder
+
+#### `data/raw/` — Raw Data
+
+This folder contains the original, unmodified source data exactly as it was received — from a database export, an API pull, a CSV upload, or any other ingestion method.
+
+**This folder is read-only by convention.** No script, no process, and no person should ever write back to this directory after the initial data drop. Raw files are treated as the ground truth of the pipeline.
+
+**Why raw data must never be modified:**
+
+- If a bug is introduced downstream (in cleaning or transformation), you need to be able to trace back to the original values. If the raw file has been altered, that trace is broken permanently.
+- Reproducibility requires that re-running the entire pipeline from scratch produces the same results. This is only possible if the starting point — the raw data — remains constant.
+- In regulated environments (finance, healthcare), the ability to audit the original source data is a legal requirement. Modifying raw files can constitute a compliance violation.
+- Raw data acts as a checkpoint. When a collaborator joins the project or a new cleaning strategy is tested, they begin from a known, stable state.
+
+#### `data/processed/` — Processed/Cleaned Data
+
+This folder contains data that has been transformed by a script. Typical operations include:
+
+- Removing duplicate rows
+- Handling null or missing values
+- Standardizing column names and data types
+- Filtering out out-of-scope records
+- Joining or merging multiple raw sources
+
+Processed files are **derived artifacts** — they can be deleted and regenerated at any time by re-running the cleaning script against the raw files. They are stored here for convenience and performance (avoiding recomputation on every run), not as permanent records.
+
+**How separation improves reproducibility and debugging:**
+
+When a data issue is reported, the first question is: "Is this a problem in the source data, or did we introduce it during processing?" A separated folder structure answers that question immediately. You open `raw/` to inspect the original, then open `processed/` to see what changed. Without separation, this distinction is impossible to make.
+
+#### `outputs/` — Output Artifacts (Figures and Reports)
+
+This folder holds the final deliverables produced by the pipeline. It is further divided into:
+
+- **`figures/`** — visualizations such as bar charts, line graphs, heatmaps, and distribution plots saved as image files (`.png`, `.svg`)
+- **`reports/`** — summary documents, aggregated tables, PDF reports, and pipeline execution logs
+
+Like processed data, output artifacts are fully regenerable from the scripts and the raw data. They should never be edited by hand. If a figure needs to change, the script that generates it is updated and re-run.
+
+### Data Lifecycle: Raw to Processed to Outputs
+
+```
+[Source System]
+      |
+      | (ingestion — no transformation)
+      v
+ data/raw/
+      |
+      | (scripts/02_clean.py — transformation, validation)
+      v
+ data/processed/
+      |
+      | (scripts/03_export.py — aggregation, visualization, reporting)
+      v
+ outputs/figures/
+ outputs/reports/
+```
+
+Each arrow represents a deliberate, scripted transition. No data moves between stages manually. This means every stage of the pipeline is traceable, repeatable, and independently verifiable.
+
+### Naming Conventions
+
+Consistent naming is what makes a folder structure usable under time pressure and in teams.
+
+| Stage | Convention | Example |
+|---|---|---|
+| Raw files | `{entity}_{period}_raw.{ext}` | `sales_2024_q1_raw.csv` |
+| Processed files | `{entity}_{period}_cleaned.{ext}` | `sales_2024_q1_cleaned.csv` |
+| Figures | `{subject}_{chart_type}.{ext}` | `sales_trend_q1_q2_bar.png` |
+| Reports | `{subject}_{period}.{ext}` | `sales_summary_2024_q1.pdf` |
+| Logs | `{name}_{YYYY-MM-DD}.txt` | `pipeline_run_log_2024-04-17.txt` |
+| Scripts | `{NN}_{action}.py` (numbered) | `01_ingest.py`, `02_clean.py` |
+
+**Rules applied:**
+
+- All lowercase, no spaces — use underscores as word separators
+- Dates in ISO 8601 format (`YYYY-MM-DD`) to ensure correct lexicographic sorting
+- Stage suffix (`_raw`, `_cleaned`) makes the data state visible in the filename itself, not just the folder
+- Script numbering (`01_`, `02_`, `03_`) communicates execution order without reading the code
+
+**How naming conventions help collaboration:**
+
+When multiple engineers are working on a pipeline, filenames must communicate intent without requiring the reader to open the file. A file named `data2_final_v3_USE_THIS.csv` tells a new team member nothing about what stage it belongs to, what period it covers, or whether it is safe to overwrite. A file named `customers_2024_cleaned.csv` answers all three questions at a glance.
+
+### Best Practices
+
+1. **Treat raw data as immutable.** Set file permissions to read-only (`chmod 444`) on raw files after ingestion to enforce this at the OS level.
+2. **Keep processed data regenerable.** Never store data in `processed/` that cannot be reproduced by running the cleaning script. If it cannot be regenerated, it belongs in `raw/`.
+3. **Version raw data when the source changes.** If a source system sends an updated extract, name it `sales_2024_q1_raw_v2.csv` rather than overwriting `v1`. Keep both.
+4. **Log pipeline runs.** Write a timestamped log file to `outputs/reports/` on each run. This provides an audit trail of when the pipeline executed and with what parameters.
+5. **Document the structure in `README.md`.** Every project should include a section in its README that explains the folder layout and the naming convention. Tribal knowledge does not scale.
+6. **Never commit large data files to version control.** Add `data/` and `outputs/` to `.gitignore`. Track the scripts, the schema, and a sample of the data — not the full datasets.
+
+### Common Mistakes
+
+| Mistake | Consequence |
+|---|---|
+| Editing raw files directly | Loss of ground truth; pipeline becomes non-reproducible |
+| Storing processed files alongside raw files in the same folder | Stage ambiguity; impossible to tell which files are safe to delete |
+| Using `final`, `v2`, `USE_THIS` in filenames | Indicates manual, ad-hoc changes; breaks naming convention |
+| Generating outputs manually and storing them without a script | Outputs cannot be regenerated; collaborators cannot verify them |
+| Committing full datasets to version control | Repository becomes bloated; sensitive data may be exposed |
+| Mixing pipeline logs with data files | Clutter; logs have a different lifecycle than data |
+
+### Conclusion
+
+Clean data organization is not a cosmetic concern — it is a structural requirement for any pipeline that needs to be debugged, extended, or handed to another engineer. The separation of `raw/`, `processed/`, and `outputs/` enforces the principle that each stage of the data lifecycle has a distinct role: raw data is the immutable source of truth, processed data is a derived and reproducible intermediate, and outputs are the final deliverables.
+
+Consistent naming conventions make the state and scope of every file visible without opening it. Combined, these practices reduce the time spent debugging data issues, lower the risk of introducing errors during collaboration, and make the pipeline auditable from ingestion to final report.
+
+---
+
 ## Key Features
 
-### 🎯 Core Capabilities
+### Core Capabilities
 
 - **6-Stage ETL Pipeline**: Ingestion → Cleaning → Canonicalization → Join → Analysis → Visualization
 - **Skill Vocabulary Management**: External YAML-based canonical skill mapping with fuzzy matching (rapidfuzz)
