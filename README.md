@@ -15,6 +15,7 @@
 
 - [Overview](#overview)
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
+- [Repository Understanding Milestone](#repository-understanding-milestone)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -121,6 +122,69 @@ This supports concrete decisions:
 - prioritize high-impact skill bundles,
 - reduce low-impact content,
 - align curriculum with measurable hiring demand.
+
+---
+
+## Repository Understanding Milestone
+
+### 1) Project Intent and High-Level Flow
+
+This repository is trying to answer a labor-market decision problem:  
+**Which skills are in demand, and which skill patterns are associated with stronger placement outcomes?**
+
+The intent is not only to "analyze data," but to connect two practical views of employability:
+- employer-side demand from job postings,
+- candidate-side outcomes from placement records.
+
+The high-level workflow follows a typical data science lifecycle:
+- **Problem framing**: define a concrete employability question.
+- **Data understanding and preparation**: ingest, validate, clean, and standardize raw sources.
+- **Feature harmonization**: canonicalize skill names so cross-source comparison is reliable.
+- **Integration and analysis**: join demand and outcome signals, compute rates/lift/confidence intervals.
+- **Communication**: produce figures and insight artifacts for interpretation and decisions.
+
+The structure reflects these lifecycle stages by separating raw/interim/processed data, stage-wise notebooks, reusable utilities, and final outputs. This makes it easier to trace how a result was produced and where each transformation happened.
+
+### 2) Repository Structure and File Roles
+
+#### What work happens in major folders
+- `data/`: staged datasets (`raw`, `interim`, `processed`, `output`) showing the progression from source files to analysis-ready tables.
+- `notebooks/`: stage-based workflow execution and investigation; these are the primary pipeline touchpoints.
+- `src/`: reusable logic (IO, cleaning, canonicalization, join, stats, visualization) and orchestration in `pipeline.py`.
+- `configs/`: schemas and parameters (e.g., thresholds, vocabulary rules) that control behavior without hard-coding.
+- `outputs/`: generated artifacts (charts, narrative insights) intended for consumption, not manual editing.
+- `tests/`: unit/property/integration checks that protect expected behavior.
+
+#### Exploratory work vs finalized analysis in this repository
+Exploratory work appears in notebooks where intermediate checks, profiling, and step-level validation are visible. Finalized analysis is represented by reusable functions in `src/`, codified configs in `configs/`, tested behavior in `tests/`, and reproducible output artifacts in `outputs/`.
+
+#### Where a new contributor should be cautious
+- Treat `data/raw/` as immutable source-of-truth input.
+- Avoid editing generated files in `outputs/` directly.
+- Be careful when changing schema expectations and canonical vocabulary rules, because those can affect downstream joins and metrics.
+- Prefer adding/changing logic in `src/` with tests, then re-running notebooks/pipeline rather than patching notebook outputs by hand.
+
+### 3) Assumptions, Gaps, and Open Questions
+
+#### Assumptions visible in the project
+- Skill mentions are assumed to be meaningful proxies for market demand and candidate capability.
+- Placement outcomes are treated as comparable across sectors/time after cleaning and standardization.
+- Canonicalization and fuzzy matching thresholds are assumed to preserve semantic meaning without introducing major mapping errors.
+- Available datasets are assumed sufficient to estimate practical relationships (e.g., lift), even though they may not capture all external factors.
+
+#### Missing documentation or unclear points
+- The expected provenance and refresh cadence of source datasets could be clearer.
+- It is not fully explicit which outputs are considered authoritative for decision-making when notebook and script runs differ.
+- Re-run order is documented, but contributor guidance for "safe extension" patterns (where to add a new analysis end-to-end) can be more explicit.
+
+#### One improvement to make extension easier
+Add a short **"Contributor Decision Guide"** section that answers:
+- where to place a new analysis notebook/module,
+- how to register new configs/schemas,
+- which tests are mandatory before PR,
+- and which artifacts should or should not be committed.
+
+This would reduce onboarding time and lower risk of accidental breakage for first-time contributors.
 
 ---
 
