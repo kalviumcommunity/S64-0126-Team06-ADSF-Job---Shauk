@@ -19,6 +19,7 @@
 - [Repository Understanding Milestone](#repository-understanding-milestone)
 - [Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts](#assignment-412--organizing-raw-data-processed-data-and-output-artifacts)
 - [Assignment 4.13 — Creating and Running a First Python Script for Data Analysis](#assignment-413--creating-and-running-a-first-python-script-for-data-analysis)
+- [Assignment 4.14 — Understanding Python Numeric and String Data Types](#assignment-414--understanding-python-numeric-and-string-data-types)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -58,6 +59,7 @@
 | 4.11 | | | | | |
 | 4.12 | Organizing Raw Data, Processed Data, and Output Artifacts | Harsh Singh | `Done` | 2026-04-17 | Folder structure, data lifecycle, naming conventions, and best practices documented |
 | 4.13 | Creating and Running a First Python Script for Data Analysis | Harsh Singh | `Done` | 2026-04-18 | Wrote `student_marks_analysis.py` demonstrating variables, lists, loops, conditionals, and basic arithmetic with a printed summary report |
+| 4.14 | Understanding Python Numeric and String Data Types | Harsh Singh | `Done` | 2026-04-18 | Wrote `numeric_and_string_types.py` demonstrating int/float/str types, arithmetic, f-string formatting, and explicit type conversion with a type-mismatch example |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -72,6 +74,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | 2026-04-17 | Harsh Singh | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
 | 2026-04-17 | Harsh Singh | Completed assignment 4.12: Documented data organization strategy — raw/processed/outputs folder structure, data lifecycle, naming conventions, and best practices |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.13: Authored and executed `student_marks_analysis.py` — a first Python script demonstrating variables, lists, a loop, a conditional, basic arithmetic, and a formatted console summary report |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.14: Authored `numeric_and_string_types.py` demonstrating integer/float/string variables, arithmetic, concatenation, f-string formatting, and a type-mismatch example fixed via `str()`, `int()`, and `float()` conversions |
 
 ---
 <!-- END TEMP SECTION -->
@@ -555,6 +558,279 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates the ability to create and run a basic Python script for simple data analysis. Using only core language features — variables, lists, loops, conditionals, and arithmetic operations — the script successfully analyzes a small dataset of student marks and produces a clean, meaningful summary in the console. It confirms a solid understanding of Python fundamentals and the script execution workflow, laying the foundation for more advanced data analysis tasks in the future.
+
+---
+
+## Assignment 4.14 — Understanding Python Numeric and String Data Types
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to develop a clear, working understanding of Python's fundamental numeric and string data types by writing a simple script that demonstrates integer and floating-point variables, string variables, arithmetic operations, string concatenation and f-string formatting, and an explicit example of type mismatch resolved through type conversion.
+
+### File Name
+
+`numeric_and_string_types.py`
+
+### Full Python Script
+
+```python
+# numeric_and_string_types.py
+# A demonstration script that explores Python's basic numeric and string
+# data types, arithmetic operations, string formatting, and type conversion.
+
+print("=" * 55)
+print("  PYTHON NUMERIC AND STRING DATA TYPES DEMONSTRATION")
+print("=" * 55)
+
+# ----------------------------------------------------------
+# Section 1: Numeric Data Types (Integer and Float)
+# ----------------------------------------------------------
+
+# Integer variable: whole number, no decimal part
+age = 21
+
+# Floating-point variable: number with a decimal part
+salary = 45000.75
+
+# Another integer for demonstration
+experience_years = 2
+
+# Another float for demonstration
+tax_rate = 0.18
+
+print("\nSection 1: Numeric Variables")
+print(f"  age              = {age}        (type: {type(age).__name__})")
+print(f"  salary           = {salary}  (type: {type(salary).__name__})")
+print(f"  experience_years = {experience_years}         (type: {type(experience_years).__name__})")
+print(f"  tax_rate         = {tax_rate}      (type: {type(tax_rate).__name__})")
+
+# ----------------------------------------------------------
+# Section 2: String Data Types
+# ----------------------------------------------------------
+
+# String variables holding meaningful text values
+first_name = "Harsh"
+last_name = "Singh"
+job_title = "Data Analyst"
+city = "Bengaluru"
+
+print("\nSection 2: String Variables")
+print(f"  first_name = '{first_name}'      (type: {type(first_name).__name__})")
+print(f"  last_name  = '{last_name}'      (type: {type(last_name).__name__})")
+print(f"  job_title  = '{job_title}' (type: {type(job_title).__name__})")
+print(f"  city       = '{city}'  (type: {type(city).__name__})")
+
+# ----------------------------------------------------------
+# Section 3: Arithmetic Operations on Numeric Types
+# ----------------------------------------------------------
+
+# Addition: increasing age by one year
+age_next_year = age + 1
+
+# Multiplication: total salary earned over the experience period
+total_earnings = salary * experience_years
+
+# Subtraction and multiplication: compute take-home salary after tax
+tax_amount = salary * tax_rate
+net_salary = salary - tax_amount
+
+# Division: monthly salary
+monthly_salary = salary / 12
+
+# Integer division and modulus
+full_years_of_experience = experience_years // 1
+remaining_months = (experience_years * 12) % 12
+
+print("\nSection 3: Arithmetic Operations")
+print(f"  age + 1                  = {age_next_year}")
+print(f"  salary * experience_years = {total_earnings}")
+print(f"  salary * tax_rate        = {tax_amount}")
+print(f"  salary - tax_amount      = {net_salary}")
+print(f"  salary / 12              = {monthly_salary:.2f}")
+print(f"  full years of experience = {full_years_of_experience}")
+print(f"  remaining months         = {remaining_months}")
+
+# ----------------------------------------------------------
+# Section 4: String Concatenation and Formatting
+# ----------------------------------------------------------
+
+# Concatenation using the + operator
+full_name = first_name + " " + last_name
+
+# Concatenation with a greeting message
+greeting = "Hello, " + full_name + "!"
+
+# String formatting using f-strings (modern, recommended approach)
+profile_summary = f"{full_name} is a {job_title} based in {city}."
+
+# String formatting using the .format() method (alternative approach)
+salary_statement = "{} earns a monthly salary of {:.2f}.".format(full_name, monthly_salary)
+
+print("\nSection 4: String Concatenation and Formatting")
+print(f"  full_name        = {full_name}")
+print(f"  greeting         = {greeting}")
+print(f"  profile_summary  = {profile_summary}")
+print(f"  salary_statement = {salary_statement}")
+
+# ----------------------------------------------------------
+# Section 5: Type Mismatch and Type Conversion
+# ----------------------------------------------------------
+
+print("\nSection 5: Type Mismatch and Type Conversion")
+
+# Example of a TYPE MISMATCH:
+# The variable `age` is an integer, but we are trying to concatenate it
+# with a string using the + operator. Python does not automatically
+# convert an integer to a string in this case, so it raises a TypeError.
+
+try:
+    # This line intentionally causes a TypeError
+    invalid_message = "My age is " + age
+    print(invalid_message)
+except TypeError as error:
+    print(f"  Type mismatch encountered: {error}")
+
+# FIX using type conversion:
+# Convert the integer `age` to a string using str() before concatenation.
+valid_message = "My age is " + str(age) + " years."
+print(f"  Fixed using str(): {valid_message}")
+
+# Another conversion example:
+# Convert a numeric-looking string into an integer using int(),
+# and into a float using float(), then perform arithmetic on them.
+salary_as_text = "50000"
+bonus_as_text = "2500.50"
+
+salary_as_int = int(salary_as_text)
+bonus_as_float = float(bonus_as_text)
+total_compensation = salary_as_int + bonus_as_float
+
+print(f"  '{salary_as_text}' converted to int   = {salary_as_int}")
+print(f"  '{bonus_as_text}' converted to float  = {bonus_as_float}")
+print(f"  total_compensation (int + float)     = {total_compensation}")
+
+# Converting a float to an integer (truncation of decimal part)
+rounded_salary = int(salary)
+print(f"  int(salary) truncates decimal part   = {rounded_salary}")
+
+print("\n" + "=" * 55)
+print("  DEMONSTRATION COMPLETE")
+print("=" * 55)
+```
+
+### Explanation of Each Part
+
+#### 1. Numeric Types
+
+Python provides two primary numeric data types:
+
+- **`int`** — represents whole numbers such as `age = 21` and `experience_years = 2`. Integers have unlimited precision in Python.
+- **`float`** — represents real numbers with a decimal point, such as `salary = 45000.75` and `tax_rate = 0.18`. Floats are stored using double-precision (64-bit) representation.
+
+The script uses `type(variable).__name__` to display the data type of each variable at runtime, confirming that Python infers the type from the assigned value.
+
+#### 2. String Types
+
+Strings (`str`) represent textual data enclosed in single or double quotes. The script creates four meaningful string variables — `first_name`, `last_name`, `job_title`, and `city` — that together describe a person's profile. Strings are immutable sequences of Unicode characters in Python.
+
+#### 3. Operations
+
+- **Arithmetic operations** on numeric types include addition (`+`), subtraction (`-`), multiplication (`*`), division (`/`), integer division (`//`), and modulus (`%`). The script uses these to calculate the next year's age, total earnings, tax amount, net salary, and monthly salary.
+- **String concatenation** uses the `+` operator to join strings (e.g., `first_name + " " + last_name`).
+- **String formatting** uses both modern **f-strings** (`f"{full_name} is a {job_title}..."`) and the older **`.format()`** method to insert variable values into strings cleanly. F-strings are preferred for readability and performance.
+
+#### 4. Type Conversion
+
+Python is a **strongly typed** language. It does not automatically convert between unrelated types like `str` and `int`. The script demonstrates this in two ways:
+
+- **Type mismatch example** — attempting `"My age is " + age` where `age` is an integer raises a `TypeError` because Python cannot implicitly concatenate a string with an integer. The script catches this error using a `try/except` block for safe demonstration.
+- **Type conversion (type casting)** — the fix uses the built-in function `str(age)` to convert the integer into a string before concatenation. The script also demonstrates `int()` to convert a numeric string into an integer, and `float()` to convert a numeric string into a float, enabling arithmetic between values originally stored as text.
+
+### Sample Output
+
+```
+=======================================================
+  PYTHON NUMERIC AND STRING DATA TYPES DEMONSTRATION
+=======================================================
+
+Section 1: Numeric Variables
+  age              = 21        (type: int)
+  salary           = 45000.75  (type: float)
+  experience_years = 2         (type: int)
+  tax_rate         = 0.18      (type: float)
+
+Section 2: String Variables
+  first_name = 'Harsh'      (type: str)
+  last_name  = 'Singh'      (type: str)
+  job_title  = 'Data Analyst' (type: str)
+  city       = 'Bengaluru'  (type: str)
+
+Section 3: Arithmetic Operations
+  age + 1                  = 22
+  salary * experience_years = 90001.5
+  salary * tax_rate        = 8100.135
+  salary - tax_amount      = 36900.615
+  salary / 12              = 3750.06
+  full years of experience = 2
+  remaining months         = 0
+
+Section 4: String Concatenation and Formatting
+  full_name        = Harsh Singh
+  greeting         = Hello, Harsh Singh!
+  profile_summary  = Harsh Singh is a Data Analyst based in Bengaluru.
+  salary_statement = Harsh Singh earns a monthly salary of 3750.06.
+
+Section 5: Type Mismatch and Type Conversion
+  Type mismatch encountered: can only concatenate str (not "int") to str
+  Fixed using str(): My age is 21 years.
+  '50000' converted to int   = 50000
+  '2500.50' converted to float  = 2500.5
+  total_compensation (int + float)     = 52500.5
+  int(salary) truncates decimal part   = 45000
+
+=======================================================
+  DEMONSTRATION COMPLETE
+=======================================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `numeric_and_string_types.py`.
+
+2. **Verify Python installation**
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python numeric_and_string_types.py
+   ```
+   or:
+   ```
+   python3 numeric_and_string_types.py
+   ```
+
+5. **Observe the output**
+   The script will print each section's results to the terminal.
+
+### Conclusion
+
+This assignment demonstrates a clear understanding of Python's core numeric and string data types. Integer and floating-point variables were used to perform a full set of arithmetic operations; string variables were combined through concatenation and f-string formatting to produce readable messages. The type-mismatch example highlights that Python does not implicitly mix unrelated types, while the use of `str()`, `int()`, and `float()` shows how explicit type conversion resolves such mismatches cleanly. Together, these exercises confirm a solid grasp of the foundational data types required for any further Python programming and data analysis work.
 
 ---
 
