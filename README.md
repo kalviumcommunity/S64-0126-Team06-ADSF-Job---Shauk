@@ -22,6 +22,7 @@
 - [Assignment 4.14 — Understanding Python Numeric and String Data Types](#assignment-414--understanding-python-numeric-and-string-data-types)
 - [Assignment 4.15 — Working with Python Lists, Tuples, and Dictionaries](#assignment-415--working-with-python-lists-tuples-and-dictionaries)
 - [Assignment 4.16 — Writing Conditional Statements in Python](#assignment-416--writing-conditional-statements-in-python)
+- [Assignment 4.17 — Using for and while Loops for Iterative Processing](#assignment-417--using-for-and-while-loops-for-iterative-processing)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -64,6 +65,7 @@
 | 4.14 | Understanding Python Numeric and String Data Types | Harsh Singh | `Done` | 2026-04-18 | Wrote `numeric_and_string_types.py` demonstrating int/float/str types, arithmetic, f-string formatting, and explicit type conversion with a type-mismatch example |
 | 4.15 | Working with Python Lists, Tuples, and Dictionaries | Harsh Singh | `Done` | 2026-04-18 | Wrote `collections_demo.py` demonstrating list creation and modification, tuple immutability with indexed access, and dictionary key-based access with `.get()` safety |
 | 4.16 | Writing Conditional Statements in Python | Harsh Singh | `Done` | 2026-04-18 | Wrote `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else`, and logical operators (`and`, `or`, `not`) with combined parenthesised conditions |
+| 4.17 | Using for and while Loops for Iterative Processing | Harsh Singh | `Done` | 2026-04-18 | Wrote `loops_demo.py` demonstrating `for` loops over lists and ranges, a bounded `while` loop with proper loop-variable updates, and `break`/`continue` with a `while…else` clause |
 
 **Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
 
@@ -81,6 +83,7 @@ Use this log to record significant progress, blockers, or decisions. Add a new r
 | 2026-04-18 | Harsh Singh | Completed assignment 4.14: Authored `numeric_and_string_types.py` demonstrating integer/float/string variables, arithmetic, concatenation, f-string formatting, and a type-mismatch example fixed via `str()`, `int()`, and `float()` conversions |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.15: Authored `collections_demo.py` demonstrating Python lists (append/update/remove), tuples (indexed access and immutability check), and dictionaries (key-based access and `.get()` safe lookup) |
 | 2026-04-18 | Harsh Singh | Completed assignment 4.16: Authored `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else` ladders for temperature and grade classification, and logical operators (`and`, `or`, `not`) including a combined parenthesised condition |
+| 2026-04-18 | Harsh Singh | Completed assignment 4.17: Authored `loops_demo.py` demonstrating `for` loops over lists and ranges, a countdown and login-attempt `while` loop with safe termination, and `break`/`continue` usage alongside a `while…else` clause |
 
 ---
 <!-- END TEMP SECTION -->
@@ -1348,6 +1351,257 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates correct and confident use of Python's conditional constructs. The **basic `if`** handles single-condition checks, the **`if-else`** cleanly separates two mutually exclusive outcomes, and the **`if-elif-else`** ladder selects between multiple branches in a readable, top-down order. The logical operators **`and`**, **`or`**, and **`not`** — along with parenthesized combinations — show how multiple conditions can be expressed in a single, clear decision statement. Together these constructs form the decision-making backbone of any Python program and are essential for controlling program flow in real-world data analysis and application logic.
+
+---
+
+## Assignment 4.17 — Using for and while Loops for Iterative Processing
+
+**Author:** Harsh Singh
+
+### Objective
+
+The goal of this assignment is to develop a clear and correct understanding of Python's iterative constructs by writing a simple script that demonstrates a `for` loop iterating over a sequence, a `while` loop with a well-defined termination condition and a properly updated loop variable, and the use of `break` and `continue` statements to control loop flow safely.
+
+### File Name
+
+`loops_demo.py`
+
+### Full Python Script
+
+```python
+# loops_demo.py
+# A demonstration script that explores Python's iterative constructs:
+# for loops, while loops, and loop-control statements (break, continue).
+
+print("=" * 55)
+print("  PYTHON LOOPS DEMONSTRATION — FOR AND WHILE")
+print("=" * 55)
+
+# ----------------------------------------------------------
+# Section 1: for loop iterating over a list
+# ----------------------------------------------------------
+# A for loop iterates directly over each element of a sequence.
+# It is the preferred choice when the number of items is known
+# in advance (e.g., items in a list, characters in a string).
+
+subjects = ["Python", "Statistics", "SQL", "Machine Learning", "Communication"]
+
+print("\nSection 1: for loop over a list")
+print(f"  List of subjects: {subjects}")
+print("  Iterating through each subject:")
+
+# Iterate through each subject in the list and print it with an index.
+# enumerate() provides both the position (starting at 1) and the value.
+for position, subject in enumerate(subjects, start=1):
+    print(f"    {position}. {subject}")
+
+# ----------------------------------------------------------
+# Section 2: for loop over a range of numbers
+# ----------------------------------------------------------
+# range(start, stop) generates numbers from start up to (but not
+# including) stop. It is useful when you need to iterate a fixed
+# number of times or generate a sequence of integers.
+
+print("\nSection 2: for loop over a range — compute sum of 1..10")
+
+total_sum = 0
+for number in range(1, 11):
+    total_sum += number
+
+print(f"  Sum of numbers from 1 to 10 = {total_sum}")
+
+# ----------------------------------------------------------
+# Section 3: while loop with a clear termination condition
+# ----------------------------------------------------------
+# A while loop continues as long as its condition is True.
+# The loop variable MUST be updated inside the loop, otherwise
+# the condition will never become False and the loop will run
+# forever (an infinite loop).
+
+print("\nSection 3: while loop — countdown from 5 to 1")
+
+countdown = 5
+while countdown > 0:
+    print(f"  Countdown: {countdown}")
+    # Update the loop variable so the loop will eventually stop.
+    countdown -= 1
+
+print("  Countdown finished. Lift-off!")
+
+# ----------------------------------------------------------
+# Section 4: while loop simulating a simple login attempt counter
+# ----------------------------------------------------------
+# This while loop uses a maximum-attempts guard to ensure it
+# cannot run indefinitely, even in the unlikely case of a bug.
+
+print("\nSection 4: while loop — login attempt simulation")
+
+max_attempts = 3
+attempts_used = 0
+correct_pin = 1234
+entered_pins = [1111, 2222, 1234]  # pretend these are user inputs
+
+while attempts_used < max_attempts:
+    current_pin = entered_pins[attempts_used]
+    attempts_used += 1
+    print(f"  Attempt {attempts_used}: entered PIN = {current_pin}")
+
+    if current_pin == correct_pin:
+        print("  Access granted. Correct PIN entered.")
+        break  # Exit the loop immediately; no further attempts needed.
+else:
+    # This else block runs only if the while condition becomes False
+    # without the loop being exited via break. It is a Pythonic way
+    # of handling "loop completed without success".
+    print("  Access denied. Maximum attempts reached.")
+
+# ----------------------------------------------------------
+# Section 5: Using 'continue' to skip specific iterations
+# ----------------------------------------------------------
+# 'continue' skips the rest of the current iteration and moves
+# on to the next one. 'break' (shown above) exits the loop entirely.
+
+print("\nSection 5: for loop with 'continue' — print only even numbers")
+
+for value in range(1, 11):
+    # Skip the current iteration when the number is odd.
+    if value % 2 != 0:
+        continue
+    print(f"  Even number: {value}")
+
+# ----------------------------------------------------------
+# Section 6: Using 'break' to exit a for loop early
+# ----------------------------------------------------------
+# Search a list for a target value and stop as soon as it is found.
+
+print("\nSection 6: for loop with 'break' — search for a target subject")
+
+target_subject = "SQL"
+found = False
+
+for subject in subjects:
+    if subject == target_subject:
+        print(f"  Found '{target_subject}' in the subjects list.")
+        found = True
+        break  # No need to continue searching once the target is found.
+
+if not found:
+    print(f"  '{target_subject}' was not found in the list.")
+
+print("\n" + "=" * 55)
+print("  DEMONSTRATION COMPLETE")
+print("=" * 55)
+```
+
+### Explanation of Each Part
+
+#### 1. `for` Loop
+
+A **`for` loop** iterates over each item of a sequence (list, tuple, string, range, etc.). It is the preferred construct when the number of iterations is known or determined by the length of the sequence.
+
+- **Iterating over a list** — the script loops over the `subjects` list and uses `enumerate(subjects, start=1)` to access both the item and its 1-based position. This is cleaner than manually maintaining an index counter.
+- **Iterating over a `range`** — `range(1, 11)` generates integers from 1 to 10 (inclusive of 1, exclusive of 11). The script accumulates these into `total_sum` to compute `1 + 2 + ... + 10 = 55`. Using `range` is the standard way to iterate a fixed number of times in Python.
+
+#### 2. `while` Loop
+
+A **`while` loop** keeps executing as long as its condition is `True`. The critical requirement is that the loop variable is updated inside the body; otherwise the condition never becomes `False` and the program enters an **infinite loop**.
+
+- **Countdown example** — `countdown = 5` is decremented by one on each iteration (`countdown -= 1`). The loop stops naturally when `countdown` reaches `0`, confirming a clear termination condition.
+- **Login attempt simulation** — the loop is bounded by `attempts_used < max_attempts`, so it cannot run more than three times. `attempts_used` is incremented on every iteration, guaranteeing forward progress. The loop uses `break` to exit as soon as the correct PIN is found, and a `while...else` clause to handle the "all attempts exhausted" case — a feature unique to Python loops.
+
+#### 3. `break` and `continue` Usage
+
+Python provides two built-in loop-control statements that modify the normal flow of iteration:
+
+- **`continue`** — immediately skips the rest of the current iteration and proceeds to the next. In Section 5, `if value % 2 != 0: continue` skips odd numbers, so only even numbers from the range `1..10` are printed.
+- **`break`** — immediately exits the enclosing loop, skipping any remaining iterations and any `else` clause attached to the loop. In Section 4 it exits the login loop on the correct PIN, and in Section 6 it stops a linear search the moment the target subject is found — a common optimization to avoid unnecessary work.
+
+Together, `break` and `continue` provide fine-grained control over loop execution without changing the readable top-down structure of the loop.
+
+### Sample Output
+
+```
+=======================================================
+  PYTHON LOOPS DEMONSTRATION — FOR AND WHILE
+=======================================================
+
+Section 1: for loop over a list
+  List of subjects: ['Python', 'Statistics', 'SQL', 'Machine Learning', 'Communication']
+  Iterating through each subject:
+    1. Python
+    2. Statistics
+    3. SQL
+    4. Machine Learning
+    5. Communication
+
+Section 2: for loop over a range — compute sum of 1..10
+  Sum of numbers from 1 to 10 = 55
+
+Section 3: while loop — countdown from 5 to 1
+  Countdown: 5
+  Countdown: 4
+  Countdown: 3
+  Countdown: 2
+  Countdown: 1
+  Countdown finished. Lift-off!
+
+Section 4: while loop — login attempt simulation
+  Attempt 1: entered PIN = 1111
+  Attempt 2: entered PIN = 2222
+  Attempt 3: entered PIN = 1234
+  Access granted. Correct PIN entered.
+
+Section 5: for loop with 'continue' — print only even numbers
+  Even number: 2
+  Even number: 4
+  Even number: 6
+  Even number: 8
+  Even number: 10
+
+Section 6: for loop with 'break' — search for a target subject
+  Found 'SQL' in the subjects list.
+
+=======================================================
+  DEMONSTRATION COMPLETE
+=======================================================
+```
+
+### How to Run the Script
+
+Follow these steps from a terminal or command prompt:
+
+1. **Save the file**
+   Save the code in a file named `loops_demo.py`.
+
+2. **Verify Python installation**
+   ```
+   python --version
+   ```
+   or on some systems:
+   ```
+   python3 --version
+   ```
+
+3. **Navigate to the script's folder**
+   ```
+   cd path/to/your/folder
+   ```
+
+4. **Execute the script**
+   ```
+   python loops_demo.py
+   ```
+   or:
+   ```
+   python3 loops_demo.py
+   ```
+
+5. **Observe the output**
+   The script will print each section's results to the terminal in order.
+
+### Conclusion
+
+This assignment demonstrates safe and correct use of Python's iterative constructs. The **`for` loop** cleanly walks through sequences such as lists and ranges, relying on Python's iterator protocol to avoid manual index management. The **`while` loop** illustrates the importance of a clear termination condition and a properly updated loop variable, which together prevent infinite loops. The **`break`** and **`continue`** statements show how to exit a loop early or skip selected iterations, while the optional **`while…else`** clause offers an elegant way to distinguish "loop completed normally" from "loop exited by `break`". Together these constructs form the foundation of iterative processing in Python and are essential tools for any data analysis or backend engineering task.
 
 ---
 
