@@ -13,6 +13,7 @@
 
 ## Table of Contents
 
+- [Assignment & Task Updates](#assignment--task-updates)
 - [Overview](#overview)
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Repository Understanding Milestone](#repository-understanding-milestone)
@@ -32,6 +33,40 @@
 - [License](#license)
 
 ---
+
+<!-- TEMP SECTION: Remove before final project submission -->
+## Assignment & Task Updates
+
+> **Note:** This section is temporary. It tracks ongoing assignment progress and task status for Sprint 3. Remove this section before final project submission.
+
+### Sprint 3 — Assignment Tracker
+
+| # | Assignment / Task | Owner | Status | Last Updated | Notes |
+|---|---|---|---|---|---|
+| 4.1 | | | | | |
+| 4.2 | | | | | |
+| 4.3 | | | | | |
+| 4.4 | | | | | |
+| 4.5 | Installing Python and Anaconda on the Local Machine | Bhargav Kalambhe | `Done` | 2026-04-17 | Installed via Anaconda distribution; `(base)` env confirmed |
+| 4.6 | Verifying Python, Conda, and Jupyter Installation | Bhargav Kalambhe | `Done` | 2026-04-17 | All three verified via `--version` and `conda info` commands |
+| 4.7 | Launching Jupyter Notebook and Understanding the Home Interface | Bhargav Kalambhe | `Done` | 2026-04-17 | Launched via `jupyter notebook`; Files / Running / Clusters tabs understood |
+| 4.8 | Understanding Notebook Cells: Code vs Markdown | Bhargav Kalambhe | `Done` | 2026-04-17 | Code cells, Markdown cells, LaTeX rendering, and keyboard shortcuts covered |
+| 4.9 | Running, Restarting, and Interrupting Jupyter Kernels | Bhargav Kalambhe | `Done` | 2026-04-17 | Interrupt, Restart, Restart & Run All — use cases and behaviour documented |
+
+**Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
+
+---
+
+### Update Log
+
+Use this log to record significant progress, blockers, or decisions. Add a new row each time something noteworthy happens.
+
+| Date | Author | Update |
+|---|---|---|
+| 2026-04-17 | Bhargav Kalambhe | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
+
+---
+<!-- END TEMP SECTION -->
 
 ## Overview
 
