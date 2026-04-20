@@ -30,6 +30,7 @@
 - [Assignment 4.23 — Understanding Array Shape, Dimensions, and Index Positions](#assignment-423--understanding-array-shape-dimensions-and-index-positions)
 - [Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays](#assignment-424--performing-basic-mathematical-operations-on-numpy-arrays)
 - [Assignment 4.25 — Applying Vectorized Operations Instead of Python Loops](#assignment-425--applying-vectorized-operations-instead-of-python-loops)
+- [Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples](#assignment-426--understanding-numpy-broadcasting-with-simple-examples)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -3515,6 +3516,234 @@ python3 -m ruff check src/vectorization.py
 ### Conclusion
 
 Vectorisation is less about NumPy and more about a mental model: **express the formula once, let the library handle the loop**. Each rewrite here (scale, add, filter, conditional) preserves the exact semantics of the loop version — the script asserts that explicitly — while cutting runtime by 20× or more. This is the pattern every later stage of the project (aggregation, outlier detection, visualisation preparation) will rely on: whenever a loop appears over numeric data, reach for an array expression first.
+
+---
+
+## Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Broadcasting is the mechanism NumPy uses to make arithmetic between **different-shaped** arrays "just work" — without copying data and without writing a loop. 4.24 already showed the scalar case (`array * 3`). This assignment generalises the idea with four progressively less trivial examples (scalar + 1-D, scalar + 2-D, matrix + row vector, matrix + column vector) plus one deliberately incompatible case, so the rules and the failure mode are both explicit.
+
+### File Name
+
+`src/broadcasting.py`
+
+### The One Rule
+
+> Align the two shapes from the **right**. Each corresponding pair of axes must either **be equal** or **have one of them equal to 1**. If both conditions fail for any pair, NumPy raises `ValueError: operands could not be broadcast together`.
+
+That is it. Everything else is a consequence.
+
+### Full Python Script
+
+```python
+"""Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples."""
+
+import numpy as np
+
+BANNER_WIDTH = 60
+
+
+def build_base_arrays() -> dict:
+    """Return the four shapes used throughout the demo."""
+    return {
+        "vector_5": np.array([1, 2, 3, 4, 5]),
+        "matrix_3x4": np.array(
+            [
+                [10, 20, 30, 40],
+                [50, 60, 70, 80],
+                [90, 100, 110, 120],
+            ]
+        ),
+        "row_vector_4": np.array([1, 2, 3, 4]),
+        "column_vector_3": np.array([[1], [2], [3]]),
+    }
+
+
+def try_incompatible_broadcast() -> str:
+    """Attempt a broadcast that must fail and return the error message."""
+    left = np.array([1, 2, 3])
+    right = np.array([10, 20, 30, 40])
+    try:
+        _ = left + right
+        return "no error (unexpected)"
+    except ValueError as error:
+        return str(error)
+
+
+def print_broadcast_case(
+    label: str,
+    left: np.ndarray,
+    right: np.ndarray,
+    operator_name: str,
+    operator_result: np.ndarray,
+) -> None:
+    """Print one broadcast case: operand shapes, operator, result shape."""
+    left_shape = left.shape if hasattr(left, "shape") else ()
+    right_shape = right.shape if hasattr(right, "shape") else ()
+    print(f"\n{label}")
+    print(f"  left  {left_shape}  : {np.asarray(left).tolist()}")
+    print(f"  right {right_shape}  : {np.asarray(right).tolist()}")
+    print(f"  {operator_name:<9} -> shape {operator_result.shape}")
+    print(f"  values            : {operator_result.tolist()}")
+
+
+def main() -> None:
+    arrays = build_base_arrays()
+    vector_5 = arrays["vector_5"]
+    matrix_3x4 = arrays["matrix_3x4"]
+    row_vector_4 = arrays["row_vector_4"]
+    column_vector_3 = arrays["column_vector_3"]
+
+    print("=" * BANNER_WIDTH)
+    print("Assignment 4.26 — NumPy Broadcasting")
+    print("=" * BANNER_WIDTH)
+
+    print_broadcast_case(
+        "1) Scalar + 1-D vector   shape (5,) + ()  -> (5,)",
+        vector_5, 10, "v + 10", vector_5 + 10,
+    )
+    print_broadcast_case(
+        "2) Scalar + 2-D matrix   shape (3, 4) + ()  -> (3, 4)",
+        matrix_3x4, 100, "m + 100", matrix_3x4 + 100,
+    )
+    print_broadcast_case(
+        "3) Matrix + row vector   shape (3, 4) + (4,)  -> (3, 4)",
+        matrix_3x4, row_vector_4, "m + row", matrix_3x4 + row_vector_4,
+    )
+    print_broadcast_case(
+        "4) Matrix + column vec   shape (3, 4) + (3, 1)  -> (3, 4)",
+        matrix_3x4, column_vector_3, "m + col", matrix_3x4 + column_vector_3,
+    )
+
+    print("\n5) Incompatible shapes   (3,) + (4,)  -> ValueError")
+    print(f"  caught: {try_incompatible_broadcast()}")
+
+    print("=" * BANNER_WIDTH)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Walking Through Each Case
+
+#### 1. Scalar + 1-D — `(5,)` and `()`
+
+```
+shape    (5,)            shape   ()
+[1, 2, 3, 4, 5]    +     10      =   [11, 12, 13, 14, 15]
+```
+
+The scalar has shape `()`. NumPy pads with leading 1s until the `ndim`s match, giving `(1,)`. The rule "each pair must be equal or one must be 1" passes (`1` vs `5`), so the scalar is stretched across all five positions.
+
+#### 2. Scalar + 2-D — `(3, 4)` and `()`
+
+Same logic as case 1 applied to each of the 12 cells. The scalar is added to every element of the matrix independently.
+
+#### 3. Matrix + row vector — `(3, 4)` and `(4,)`
+
+```
+shape (3, 4)                   shape (4,)           result (3, 4)
+[[10, 20, 30, 40],                                  [[11, 22, 33, 44],
+ [50, 60, 70, 80],     +       [1, 2, 3, 4]    =    [51, 62, 73, 84],
+ [90,100,110,120]]                                   [91,102,113,124]]
+```
+
+Right-aligning the shapes gives `(3, 4)` vs `( , 4)` — NumPy treats the row vector as if it had an implicit leading `1`, making it `(1, 4)`. The pair `(1, 4)` vs `(3, 4)` satisfies the rule (1 vs 3 is broadcastable), so the row vector is **reused for every row** in the matrix. No copy is made; NumPy just walks the row vector's memory repeatedly.
+
+#### 4. Matrix + column vector — `(3, 4)` and `(3, 1)`
+
+```
+shape (3, 4)                   shape (3, 1)         result (3, 4)
+[[10, 20, 30, 40],             [[1],                [[11, 21, 31, 41],
+ [50, 60, 70, 80],     +        [2],           =    [52, 62, 72, 82],
+ [90,100,110,120]]              [3]]                 [93,103,113,123]]
+```
+
+Right-aligning `(3, 4)` and `(3, 1)`: the last axes `4` vs `1` → broadcastable (one is 1); the first axes `3` vs `3` → broadcastable (equal). The column vector is **reused for every column** in the matrix.
+
+#### 5. Incompatible — `(3,)` and `(4,)`
+
+Right-aligning `(3,)` and `(4,)`: the only pair is `3` vs `4`. Neither is 1 and they are not equal → the rule fails. The script catches the real NumPy error:
+
+```
+operands could not be broadcast together with shapes (3,) (4,)
+```
+
+This is the failure mode worth memorising: the error message names the exact shapes, which is all you need to debug.
+
+### Shape-Alignment Table
+
+| Left shape | Right shape | Right-aligned pairs | Compatible? | Result shape |
+|---|---|---|---|---|
+| `(5,)` | `()` | `5 vs —` → `5 vs 1` | yes | `(5,)` |
+| `(3, 4)` | `()` | `(3, 4) vs ( , )` → `(3, 4) vs (1, 1)` | yes | `(3, 4)` |
+| `(3, 4)` | `(4,)` | `(3, 4) vs ( , 4)` → `(3, 4) vs (1, 4)` | yes | `(3, 4)` |
+| `(3, 4)` | `(3, 1)` | `(3, 4) vs (3, 1)` | yes | `(3, 4)` |
+| `(3,)` | `(4,)` | `3 vs 4` | **no** → `ValueError` | — |
+| `(2, 3, 4)` | `(3, 1)` | `(2, 3, 4) vs (_, 3, 1)` | yes | `(2, 3, 4)` |
+
+### Why Broadcasting Matters
+
+- **No copies.** A broadcasted operand is *conceptually* stretched; in memory NumPy just reuses the same bytes while iterating — so broadcasting is cheap even for large arrays.
+- **Replaces explicit tiling.** Without broadcasting, adding a row vector to every row of a matrix requires `np.tile` or an outer loop. Broadcasting collapses both to `matrix + row_vector`.
+- **Composes with all arithmetic.** `+`, `-`, `*`, `/`, `**`, comparisons — every element-wise operator broadcasts identically, so learning the rule once covers the entire NumPy API.
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.26 — NumPy Broadcasting
+============================================================
+
+1) Scalar + 1-D vector   shape (5,) + ()  -> (5,)
+  v + 10    -> shape (5,)
+  values    : [11, 12, 13, 14, 15]
+
+2) Scalar + 2-D matrix   shape (3, 4) + ()  -> (3, 4)
+  m + 100   -> shape (3, 4)
+  values    : [[110, 120, 130, 140], [150, 160, 170, 180], [190, 200, 210, 220]]
+
+3) Matrix + row vector   shape (3, 4) + (4,)  -> (3, 4)
+  m + row   -> shape (3, 4)
+  values    : [[11, 22, 33, 44], [51, 62, 73, 84], [91, 102, 113, 124]]
+
+4) Matrix + column vec   shape (3, 4) + (3, 1)  -> (3, 4)
+  m + col   -> shape (3, 4)
+  values    : [[11, 21, 31, 41], [52, 62, 72, 82], [93, 103, 113, 123]]
+
+5) Incompatible shapes   (3,) + (4,)  -> ValueError
+  caught: operands could not be broadcast together with shapes (3,) (4,)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/broadcasting.py
+python3 -m black src/broadcasting.py
+python3 -m ruff check src/broadcasting.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Using `(N,)` where `(N, 1)` is meant (column vector) | Row-wise broadcast instead of column-wise — values end up in the wrong positions |
+| Using `(1, N)` where `(N,)` would work | Works, but adds an unnecessary axis and obscures intent |
+| Assuming broadcasting copies data | It does not — just repeated memory access — so it is safe for large arrays |
+| Treating `ValueError` as a NumPy bug | It is the protection mechanism; read the shapes in the message and fix the caller |
+| Calling `np.tile` to pre-expand an operand | Almost always unnecessary; broadcasting does it in-place and for free |
+| Relying on broadcasting between `(M, N)` and `(M, K)` with `N != K != 1` | Incompatible; NumPy correctly refuses |
+
+### Conclusion
+
+Broadcasting is the final piece of the NumPy element-wise arithmetic model. Combined with 4.22 (creating arrays), 4.23 (shape/indexing), 4.24 (basic math), and 4.25 (vectorised rewrites), it means any numeric formula the project needs — per-row normalisation, per-column standardisation, demand-vs-supply ratios across sectors and skills — can be written as a single array expression. The failing-case demo is just as important as the working cases: when broadcasting refuses, the error message names the shapes that don't align, which is usually enough to trace the caller in one step.
 
 ---
 

@@ -57,7 +57,7 @@
 | 4.23 | Understanding Array Shape, Dimensions, and Index Positions | `Done` | 2026-04-20 | `src/array_shape_indexing.py` — 1D/2D layout walk-through, complete index maps, zero-based access, `:`-slicing, `safe_get` out-of-range check; black + ruff clean |
 | 4.24 | Performing Basic Mathematical Operations on NumPy Arrays | `Done` | 2026-04-20 | `src/array_math.py` — element-wise +/-/*/÷ on matched arrays, scalar ops, int/float promotion, supply/demand ratio domain example; black + ruff clean |
 | 4.25 | Applying Vectorized Operations Instead of Python Loops | `Done` | 2026-04-20 | `src/vectorization.py` — 4 loop-vs-vector pairs (scale, add, filter, np.where), `np.array_equal` correctness check, `time.perf_counter` bench on 100k elements (~20–35× speed-ups); black + ruff clean |
-| 4.26 | Understanding NumPy Broadcasting with Simple Examples | `Not Started` | — | |
+| 4.26 | Understanding NumPy Broadcasting with Simple Examples | `Done` | 2026-04-20 | `src/broadcasting.py` — 4 working cases (scalar+1D, scalar+2D, matrix+row, matrix+column) plus caught `ValueError` for incompatible `(3,)`+`(4,)`; black + ruff clean |
 | 4.27 | Creating Pandas Series from Lists and Arrays | `Not Started` | — | |
 | 4.28 | Creating Pandas DataFrames from Dictionaries and Files | `Not Started` | — | |
 | 4.39 | Visualizing Data Distributions Using Histograms | `Not Started` | — | |
@@ -74,10 +74,10 @@
 |---|---:|---:|---:|---:|
 | Harshita Soni ★ | 0 | 0 | 15 | 15 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe | 6 | 0 | 8 | 14 |
-| **Overall** | **16** | **0** | **28** | **44** |
+| Bhargav Kalambhe | 7 | 0 | 7 | 14 |
+| **Overall** | **17** | **0** | **27** | **44** |
 
-Done: **16 / 44** (~36%)
+Done: **17 / 44** (~39%)
 
 ---
 
@@ -90,8 +90,8 @@ Done: **16 / 44** (~36%)
 ## 4. What's Remaining (priority order)
 
 ### Blocking path for Bhargav (next-up first)
-1. **4.26** — Understanding NumPy Broadcasting with Simple Examples *(next)*
-2. 4.27 – 4.28 — Pandas construction
+1. **4.27** — Creating Pandas Series from Lists and Arrays *(next)*
+2. 4.28 — Creating Pandas DataFrames from Dictionaries and Files
 3. 4.39 – 4.43 — Visualisation suite (needs Harshita's cleaned DataFrames — coordinate)
 
 ### Other members
@@ -120,6 +120,7 @@ Done: **16 / 44** (~36%)
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.23: `src/array_shape_indexing.py` — complete 1D and 2D index maps, zero-based access, negative indices, row/column `:`-slicing, and `safe_get` defensive out-of-range check that names the offending axis and length; black + ruff clean; full README section added |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.24: `src/array_math.py` — element-wise +/-/*/÷ on two shape-matched arrays, scalar ops (including `**`), int+float dtype promotion, and a domain mini-example computing a supply/demand ratio across five skills; black + ruff clean; full README section added |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.25: `src/vectorization.py` — 4 loop-vs-vector rewrites (scale, pairwise add, boolean-mask filter, `np.where` conditional), `np.array_equal` correctness asserts, `time.perf_counter` benchmarks on 100k elements showing ~20–35× speed-ups; black + ruff clean; full README section added |
+| 2026-04-20 | Bhargav Kalambhe | Completed 4.26: `src/broadcasting.py` — four broadcasting cases (scalar+1D, scalar+2D, matrix+row-vector, matrix+column-vector) plus a caught `ValueError` for incompatible `(3,)`+`(4,)`; ASCII layout walk-through and right-aligned shape table in the README; black + ruff clean |
 
 ---
 
