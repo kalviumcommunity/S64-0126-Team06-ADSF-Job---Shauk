@@ -26,6 +26,7 @@
 - [Assignment 4.19 — Passing Data into Functions and Returning Results](#assignment-419--passing-data-into-functions-and-returning-results)
 - [Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics)](#assignment-420--writing-readable-variable-names-and-comments-pep8-basics)
 - [Assignment 4.21 — Structuring Python Code for Readability and Reuse](#assignment-421--structuring-python-code-for-readability-and-reuse)
+- [Assignment 4.22 — Creating NumPy Arrays from Python Lists](#assignment-422--creating-numpy-arrays-from-python-lists)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -2624,6 +2625,247 @@ The same eight skills appear in both rankings; the trending block simply reuses 
 ### Conclusion
 
 Code structure is not cosmetic — it is how a single script scales into a maintainable module. The five-section layout used here (imports → constants → pure helpers → reporting → orchestration) is a convention, not a law, but it solves the three problems that hurt readability most: hidden dependencies, magic numbers, and mixed side effects. By keeping pure logic separate from I/O, the helpers remain trivially reusable in notebooks, tests, and later pipeline stages — exactly the kind of foundation the NumPy, Pandas, and visualisation work in the rest of this sprint will build on.
+
+---
+
+## Assignment 4.22 — Creating NumPy Arrays from Python Lists
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+This assignment is the hand-off from plain Python containers to the NumPy numerical stack — every later ML, analysis, and visualisation step in this sprint runs on arrays, not on lists. The script shows how to convert flat and nested Python lists into 1-D and 2-D `np.ndarray` objects, how to read the four properties that describe every array (`shape`, `ndim`, `size`, `dtype`), and why arithmetic on arrays behaves fundamentally differently from arithmetic on lists.
+
+### File Name
+
+`src/numpy_arrays_from_lists.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.22 — Creating NumPy Arrays from Python Lists.
+
+Author: Bhargav Kalambhe (Frontend & ML)
+Team:   Team 06 — Job-ही-Shauk (Sprint 3)
+
+This script is the first step out of plain-Python containers and into the
+NumPy numerical stack. It demonstrates:
+
+    1. Importing NumPy under the canonical alias `np`.
+    2. Creating a 1D array from a flat Python list.
+    3. Creating a 2D array from a nested (list-of-lists) Python list.
+    4. Inspecting the four array properties every analyst checks first:
+       shape, dtype, ndim, size.
+    5. Contrasting element-wise array arithmetic with Python list behaviour.
+"""
+
+import numpy as np
+
+BANNER_WIDTH = 60
+
+
+def describe_array(label: str, array: np.ndarray) -> dict:
+    """Return the four properties every NumPy user checks first."""
+    return {
+        "label": label,
+        "values": array,
+        "shape": array.shape,
+        "ndim": array.ndim,
+        "size": array.size,
+        "dtype": array.dtype,
+    }
+
+
+def build_one_dimensional_array() -> np.ndarray:
+    """Convert a flat Python list of skill mention counts into a 1D array."""
+    mention_counts = [12, 9, 4, 6, 2, 11, 7, 3]
+    return np.array(mention_counts)
+
+
+def build_two_dimensional_array() -> np.ndarray:
+    """Convert a nested list (rows = sectors, cols = skills) into a 2D array."""
+    mentions_by_sector = [
+        [12, 9, 4, 6],   # tech
+        [5, 11, 8, 3],   # finance
+        [2, 4, 10, 7],   # healthcare
+    ]
+    return np.array(mentions_by_sector)
+
+
+def print_array_description(description: dict) -> None:
+    """Print the four key properties of an array in a uniform block."""
+    print(f"\n{description['label']}")
+    print(f"  values : {description['values']}")
+    print(f"  shape  : {description['shape']}")
+    print(f"  ndim   : {description['ndim']}")
+    print(f"  size   : {description['size']}")
+    print(f"  dtype  : {description['dtype']}")
+
+
+def print_list_vs_array_contrast() -> None:
+    """Demonstrate the difference between list `+` and array `+`."""
+    plain_list = [1, 2, 3]
+    numpy_array = np.array([1, 2, 3])
+
+    print("\nWhy arrays, not lists, for numeric work:")
+    print(f"  list  + list  -> {plain_list + plain_list}   (concatenation)")
+    print(f"  array + array -> {numpy_array + numpy_array} (element-wise add)")
+    print(f"  array * 3     -> {numpy_array * 3} (element-wise scale)")
+
+
+def main() -> None:
+    """Build the 1D and 2D arrays, describe them, then contrast with lists."""
+    one_d = build_one_dimensional_array()
+    two_d = build_two_dimensional_array()
+
+    print("=" * BANNER_WIDTH)
+    print("Assignment 4.22 — NumPy Arrays from Python Lists")
+    print("=" * BANNER_WIDTH)
+
+    print_array_description(describe_array("1D array: skill mention counts", one_d))
+    print_array_description(
+        describe_array("2D array: mentions by sector x skill", two_d)
+    )
+    print_list_vs_array_contrast()
+    print("=" * BANNER_WIDTH)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Explanation of Each Part
+
+#### 1. The canonical `import numpy as np`
+
+```python
+import numpy as np
+```
+
+NumPy is always imported under the alias `np` — this is a convention so universal that every tutorial, Stack Overflow answer, and textbook assumes it. Following it means a reader never has to ask "where did `array` come from?".
+
+#### 2. Building a 1-D array from a flat list
+
+```python
+mention_counts = [12, 9, 4, 6, 2, 11, 7, 3]
+return np.array(mention_counts)
+```
+
+`np.array()` takes any sequence and produces an `ndarray`. When given a flat list it produces a 1-D array whose `shape` is `(8,)` — the comma is deliberate; a tuple with one element is NumPy's way of saying "one axis, length 8".
+
+#### 3. Building a 2-D array from a nested list
+
+```python
+mentions_by_sector = [
+    [12, 9, 4, 6],   # tech
+    [5, 11, 8, 3],   # finance
+    [2, 4, 10, 7],   # healthcare
+]
+return np.array(mentions_by_sector)
+```
+
+When `np.array()` receives a nested (list-of-lists) input with rows of equal length, it infers a 2-D array. The result has `shape == (3, 4)` — three rows (sectors) and four columns (skills). The key rule: **every inner list must be the same length**, otherwise NumPy falls back to an object array and all the performance wins are lost.
+
+#### 4. The four properties every analyst checks first
+
+The `describe_array` helper returns all four in one place:
+
+| Property | What it means | 1-D example | 2-D example |
+|---|---|---|---|
+| `shape` | tuple of axis lengths | `(8,)` | `(3, 4)` |
+| `ndim` | number of axes / dimensions | `1` | `2` |
+| `size` | total number of elements | `8` | `12` |
+| `dtype` | element data type | `int64` | `int64` |
+
+Checking these **before** any indexing or arithmetic catches the single biggest class of NumPy bugs: operating on an array whose real shape is not what the code assumes.
+
+#### 5. Array arithmetic vs list arithmetic
+
+```python
+plain_list  + plain_list   # [1,2,3,1,2,3]  — concatenation
+numpy_array + numpy_array  # [2 4 6]        — element-wise add
+numpy_array * 3            # [3 6 9]        — element-wise scale
+```
+
+This is the single most important mental-model shift in NumPy: **arithmetic operators are element-wise**. `+` does not concatenate, `*` does not repeat. Internally NumPy loops in optimised C code, so these operations are 10–100× faster than the equivalent Python `for` loop — but the programmer writes the formula, not the loop.
+
+### Why NumPy Instead of Lists
+
+| Concern | Python list | NumPy array |
+|---|---|---|
+| Memory per element | object header + pointer | one contiguous typed slot |
+| `a + b` on numbers | concatenates | element-wise adds |
+| Broadcasting (4.26) | not supported | first-class |
+| Typical speed (1M elements) | seconds | milliseconds |
+| Downstream (Pandas, matplotlib, sklearn) | converted on entry | native |
+
+Every library later in this sprint — pandas DataFrames, matplotlib plotting, scikit-learn models — is built on top of NumPy arrays. Learning `np.array` now means everything downstream feels consistent.
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.22 — NumPy Arrays from Python Lists
+============================================================
+
+1D array: skill mention counts
+  values : [12  9  4  6  2 11  7  3]
+  shape  : (8,)
+  ndim   : 1
+  size   : 8
+  dtype  : int64
+
+2D array: mentions by sector x skill
+  values : [[12  9  4  6]
+ [ 5 11  8  3]
+ [ 2  4 10  7]]
+  shape  : (3, 4)
+  ndim   : 2
+  size   : 12
+  dtype  : int64
+
+Why arrays, not lists, for numeric work:
+  list  + list  -> [1, 2, 3, 1, 2, 3]   (concatenation)
+  array + array -> [2 4 6] (element-wise add)
+  array * 3     -> [3 6 9] (element-wise scale)
+```
+
+### How to Run the Script
+
+1. **From the repo root**
+   ```bash
+   cd S64-0126-Team06-ADSF-Job---Shauk
+   ```
+
+2. **Install dependencies (first time only)**
+   ```bash
+   python3 -m pip install -r requirements.txt
+   ```
+
+3. **Run**
+   ```bash
+   python3 src/numpy_arrays_from_lists.py
+   ```
+
+4. **Verify PEP 8 compliance**
+   ```bash
+   python3 -m black src/numpy_arrays_from_lists.py
+   python3 -m ruff check src/numpy_arrays_from_lists.py
+   ```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Mixing row lengths in the nested list | Falls back to `dtype=object`; all arithmetic becomes slow and error-prone |
+| Using `+` between an array and a list | Returns an array (NumPy wins) but the intent becomes unclear — convert the list first |
+| Assuming `shape == (N,)` is the same as `(N, 1)` | They are different: `(N,)` is 1-D, `(N, 1)` is 2-D — indexing and broadcasting differ |
+| Forgetting to check `dtype` | An integer list containing one float silently promotes everything to `float64` |
+| Importing NumPy as `numpy` (no alias) | Diverges from every tutorial; readers have to adjust |
+
+### Conclusion
+
+The jump from Python lists to NumPy arrays is small in code (`np.array(...)`) but enormous in capability: element-wise math, explicit shapes, homogeneous dtypes, and a shared substrate for every downstream library. Keeping the pattern tight — import as `np`, build with `np.array`, inspect `shape` / `ndim` / `size` / `dtype` before acting — prevents the silent shape bugs that make NumPy code hard to debug later. The 1-D and 2-D fixtures built here will be reused in the next several assignments on shape/indexing (4.23), arithmetic (4.24), vectorisation (4.25), and broadcasting (4.26).
 
 ---
 
