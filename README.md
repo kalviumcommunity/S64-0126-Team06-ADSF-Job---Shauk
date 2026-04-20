@@ -32,6 +32,7 @@
 - [Assignment 4.25 — Applying Vectorized Operations Instead of Python Loops](#assignment-425--applying-vectorized-operations-instead-of-python-loops)
 - [Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples](#assignment-426--understanding-numpy-broadcasting-with-simple-examples)
 - [Assignment 4.27 — Creating Pandas Series from Lists and Arrays](#assignment-427--creating-pandas-series-from-lists-and-arrays)
+- [Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files](#assignment-428--creating-pandas-dataframes-from-dictionaries-and-files)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -3961,6 +3962,233 @@ python3 -m ruff check src/pandas_series.py
 ### Conclusion
 
 A Pandas Series is the minimum unit that understands both values and labels, and the defining difference from a NumPy array is that arithmetic aligns by label — unmatched labels become `NaN` rather than silently zero. Every DataFrame in the project is a dict of Series, so mastering construction (list, array, explicit labels, dict), access (`iloc` vs `loc`), and label-aware arithmetic is the prerequisite for the DataFrame work in 4.28 and for all of Harshita's cleaning-and-analysis assignments (4.29 onward).
+
+---
+
+## Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A Pandas `DataFrame` is the 2-D labelled container at the heart of every Pandas pipeline — a dict of Series that share the same row index. This is the form Harshita's cleaning work (4.29–4.38) will receive, and the form Bhargav's visualisations (4.39–4.43) will consume. The script demonstrates the four everyday construction patterns (dict-of-lists, list-of-dicts, dict-of-Series, CSV file) and then exercises the standard inspection / selection operations every later assignment will rely on.
+
+### File Name
+
+`src/pandas_dataframes.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files."""
+
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+SAMPLE_CSV_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "raw" / "sample_job_postings.csv"
+)
+
+
+def dataframe_from_dict_of_lists() -> pd.DataFrame:
+    """Build a DataFrame where each dict key becomes a column."""
+    data = {
+        "skill": ["python", "sql", "excel", "tableau", "pytorch"],
+        "mentions": [12, 9, 4, 6, 2],
+        "sector": ["tech", "finance", "finance", "tech", "tech"],
+    }
+    return pd.DataFrame(data)
+
+
+def dataframe_from_list_of_dicts() -> pd.DataFrame:
+    """Build a DataFrame where each list element becomes a row."""
+    rows = [
+        {"skill": "python", "mentions": 12, "sector": "tech"},
+        {"skill": "sql", "mentions": 9, "sector": "finance"},
+        {"skill": "excel", "mentions": 4, "sector": "finance"},
+    ]
+    return pd.DataFrame(rows)
+
+
+def dataframe_from_dict_of_series() -> pd.DataFrame:
+    """Build a DataFrame from typed Series — each column keeps its dtype."""
+    columns = {
+        "skill": pd.Series(["python", "sql", "excel"], dtype="string"),
+        "mentions": pd.Series([12, 9, 4], dtype="int64"),
+        "ratio": pd.Series([1.5, 1.2, 1.14], dtype="float64"),
+    }
+    return pd.DataFrame(columns)
+
+
+def dataframe_from_csv() -> pd.DataFrame:
+    """Load the bundled sample CSV. Returns an empty frame if missing."""
+    if not SAMPLE_CSV_PATH.exists():
+        return pd.DataFrame()
+    return pd.read_csv(SAMPLE_CSV_PATH)
+```
+
+### Four Construction Patterns
+
+| Source | Shape-producing rule | Best for | Example |
+|---|---|---|---|
+| **Dict of lists** | keys → columns, list values → rows within each column | hand-authored demo data, uniform columns | `pd.DataFrame({"a": [1,2], "b": [3,4]})` |
+| **List of dicts** | list items → rows, dict keys → columns; missing keys become `NaN` | streaming rows from a loop or API | `pd.DataFrame([{"a": 1, "b": 3}, {"a": 2, "b": 4}])` |
+| **Dict of Series** | each Series carries its own dtype and index | typed columns, mixed-length inputs Pandas will align | `pd.DataFrame({"a": pd.Series([1, 2], dtype="int32")})` |
+| **CSV via `read_csv`** | one row per CSV row, dtypes inferred per column | every real-world pipeline entry point | `pd.read_csv("data/raw/sample_job_postings.csv")` |
+
+### Explanation of Each Part
+
+#### 1. Dict of lists — keys become columns
+
+```python
+pd.DataFrame({
+    "skill": ["python", "sql", "excel"],
+    "mentions": [12, 9, 4],
+    "sector": ["tech", "finance", "finance"],
+})
+```
+
+The simplest form: every key is a column name, every list is that column's values. All lists **must be the same length** or Pandas raises `ValueError: arrays must all be same length`. Use this when the data is already column-aligned and you want the shortest correct code.
+
+#### 2. List of dicts — each item is a row
+
+```python
+pd.DataFrame([
+    {"skill": "python", "mentions": 12},
+    {"skill": "sql", "mentions": 9},
+])
+```
+
+Each list element becomes one row; dict keys are collected across all elements to form the columns. Two useful properties:
+
+- **Missing keys are tolerated.** A row that omits a key gets `NaN` in that column. This is the right form when rows come from a JSON stream where fields are sometimes absent.
+- **Column order.** Pandas preserves insertion order of the first-seen keys, so the first row's field order becomes the column order.
+
+#### 3. Dict of Series — typed columns
+
+```python
+pd.DataFrame({
+    "skill": pd.Series(["python", "sql"], dtype="string"),
+    "mentions": pd.Series([12, 9], dtype="int64"),
+    "ratio": pd.Series([1.5, 1.2], dtype="float64"),
+})
+```
+
+Passing Series instead of raw lists has two effects:
+
+- **Each column keeps its declared dtype.** Useful when the default inference would get it wrong (e.g. `"string"` dtype instead of the generic `object`).
+- **Pandas aligns by index.** If the input Series have different indexes, the resulting DataFrame uses the union of all indexes and fills gaps with `NaN`.
+
+Use this form when columns have different types or different natural lengths that should be aligned rather than padded by hand.
+
+#### 4. CSV via `read_csv`
+
+```python
+pd.read_csv("data/raw/sample_job_postings.csv")
+```
+
+The real-world entry point. `read_csv` opens the file, parses rows, infers dtypes column-by-column, and returns a DataFrame. Important defaults:
+
+- The first row is the **header**. Pass `header=None` if the file has no header.
+- Dtypes are inferred; numeric-looking columns become `int64` or `float64`, everything else becomes `object` (Python strings).
+- A date column is parsed as `object` by default — use `parse_dates=["date_posted"]` to get `datetime64[ns]` instead.
+
+The bundled sample CSV produces a `(3, 7)` DataFrame with columns `['job_id', 'job_title', 'company', 'sector', 'skills_required', 'date_posted', 'salary_lpa']` — exactly the shape Harshita's cleaning pipeline (4.29–4.36) will operate on.
+
+### Inspection: `shape`, `columns`, `index`, `dtypes`
+
+Every DataFrame answers four questions cheaply:
+
+| Attribute | Meaning | Example |
+|---|---|---|
+| `frame.shape` | `(rows, columns)` tuple | `(5, 3)` |
+| `frame.columns` | ordered list of column labels | `['skill', 'mentions', 'sector']` |
+| `frame.index` | row labels (default `RangeIndex(0..N)`) | `[0, 1, 2, 3, 4]` |
+| `frame.dtypes` | Series of per-column dtypes | `skill object, mentions int64, sector object` |
+
+`.head(n)` (default 5) and `.tail(n)` peek at the first/last rows without printing the whole frame — indispensable when the frame has 10 000 rows instead of 5.
+
+### Selection: Columns and Rows
+
+```python
+frame["skill"]                  # -> Series (single column)
+frame[["skill", "mentions"]]    # -> DataFrame (subset of columns)
+
+frame.iloc[0]                   # -> Series (first row, positional)
+frame.loc[0, "skill"]           # -> scalar (row 0, column "skill")
+frame.loc[:, ["skill"]]         # -> DataFrame (all rows, one column)
+```
+
+The guiding rule from 4.27 still applies: **`iloc` for positional, `loc` for label-based**. On a DataFrame, `loc` takes `(row_label, column_label)` — and either side accepts a list or a slice to return a sub-frame.
+
+### Relationship to NumPy — closing the 4.22 → 4.28 arc
+
+```python
+frame.values                   # -> numpy.ndarray
+isinstance(frame.values, np.ndarray)   # -> True
+```
+
+Under the hood, a DataFrame stores its values in one or more NumPy arrays — so every arithmetic, broadcasting, and vectorisation trick from 4.22–4.26 still applies to `frame["mentions"] * 1.1` or `frame[["mentions"]].values + 10`. The DataFrame layer adds labels, dtypes, missing-value handling, and column-aware `.agg` / `.groupby` on top; the performance model is the same C-level inner loop underneath.
+
+### Sample Output (excerpt)
+
+```
+1) DataFrame from a dict of lists (keys -> columns):
+     skill  mentions   sector
+0   python        12     tech
+1      sql         9  finance
+2    excel         4  finance
+3  tableau         6     tech
+4  pytorch         2     tech
+  shape   : (5, 3)
+  columns : ['skill', 'mentions', 'sector']
+
+4) DataFrame from read_csv('data/raw/sample_job_postings.csv'):
+   job_id       job_title    company      sector                  skills_required date_posted  salary_lpa
+0       1  Data Scientist  Acme Corp  Technology      Python,SQL,Machine Learning  2024-01-15        12.0
+1       2     ML Engineer   Beta Inc  Technology  Python,TensorFlow,Deep Learning  2024-02-10        18.0
+2       3    Data Analyst  Gamma Ltd     Finance          SQL,Excel,Data Analysis  2024-01-20         7.0
+  shape   : (3, 7)
+
+Row selection:
+  frame.iloc[0]         ->
+skill       python
+mentions        12
+sector        tech
+Name: 0, dtype: object
+  frame.loc[0, 'skill'] -> python
+
+Underlying storage:
+  type(frame.values)    -> ndarray
+  isinstance ndarray?   -> True
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/pandas_dataframes.py
+python3 -m black src/pandas_dataframes.py
+python3 -m ruff check src/pandas_dataframes.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Using a dict with unequal-length lists | `ValueError: arrays must all be same length` — use dict-of-Series if you want alignment instead |
+| Forgetting `parse_dates=` on CSV date columns | Dates are stored as `object` strings; `.dt` accessor won't work until parsed |
+| Accessing a column via `frame.column_name` | Works unless the name clashes with a DataFrame attribute — prefer `frame["column_name"]` |
+| Calling `.values` everywhere | Drops the index and column labels; use only when the downstream code explicitly needs a NumPy array |
+| Appending rows in a loop with `frame.append(row)` | Deprecated; `pd.concat([...])` or building a list of dicts and one `pd.DataFrame(...)` is both faster and still supported |
+| Editing `data/raw/*.csv` in place | Raw data is immutable by convention — all cleaning output goes to `data/processed/` |
+
+### Conclusion
+
+The DataFrame is where everything the sprint has built so far converges: NumPy arrays (4.22) provide the numeric substrate, `shape` / `ndim` / `dtype` (4.23) describe each column's layout, element-wise math and broadcasting (4.24–4.26) still work under the hood, vectorisation (4.25) still beats any Python loop, and Pandas Series (4.27) are the columns themselves. With the four construction patterns here — dict-of-lists, list-of-dicts, dict-of-Series, and `read_csv` — the project now has every ingredient it needs to load the real `data/raw/*.csv` files, hand them to Harshita's cleaning pipeline (4.29–4.38), and eventually surface the cleaned frames to the visualisation stage (4.39–4.43).
 
 ---
 

@@ -59,7 +59,7 @@
 | 4.25 | Applying Vectorized Operations Instead of Python Loops | `Done` | 2026-04-20 | `src/vectorization.py` — 4 loop-vs-vector pairs (scale, add, filter, np.where), `np.array_equal` correctness check, `time.perf_counter` bench on 100k elements (~20–35× speed-ups); black + ruff clean |
 | 4.26 | Understanding NumPy Broadcasting with Simple Examples | `Done` | 2026-04-20 | `src/broadcasting.py` — 4 working cases (scalar+1D, scalar+2D, matrix+row, matrix+column) plus caught `ValueError` for incompatible `(3,)`+`(4,)`; black + ruff clean |
 | 4.27 | Creating Pandas Series from Lists and Arrays | `Done` | 2026-04-20 | `src/pandas_series.py` — 4 construction patterns (list, array, explicit labels, dict), `iloc` vs `loc`, label-aware addition producing NaN for unmatched labels; black + ruff clean |
-| 4.28 | Creating Pandas DataFrames from Dictionaries and Files | `Not Started` | — | |
+| 4.28 | Creating Pandas DataFrames from Dictionaries and Files | `Done` | 2026-04-20 | `src/pandas_dataframes.py` — 4 construction patterns (dict-of-lists, list-of-dicts, dict-of-Series, `read_csv`), shape/columns/dtypes inspection, column/row selection, `.values` → `ndarray`; black + ruff clean |
 | 4.39 | Visualizing Data Distributions Using Histograms | `Not Started` | — | |
 | 4.40 | Visualizing Data Distributions Using Boxplots | `Not Started` | — | |
 | 4.41 | Identifying Trends Over Time Using Line Plots | `Not Started` | — | |
@@ -74,10 +74,10 @@
 |---|---:|---:|---:|---:|
 | Harshita Soni ★ | 0 | 0 | 15 | 15 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe | 8 | 0 | 6 | 14 |
-| **Overall** | **18** | **0** | **26** | **44** |
+| Bhargav Kalambhe | 9 | 0 | 5 | 14 |
+| **Overall** | **19** | **0** | **25** | **44** |
 
-Done: **18 / 44** (~41%)
+Done: **19 / 44** (~43%)
 
 ---
 
@@ -90,8 +90,8 @@ Done: **18 / 44** (~41%)
 ## 4. What's Remaining (priority order)
 
 ### Blocking path for Bhargav (next-up first)
-1. **4.28** — Creating Pandas DataFrames from Dictionaries and Files *(next)*
-2. 4.39 – 4.43 — Visualisation suite (needs Harshita's cleaned DataFrames — coordinate)
+1. First tranche of 4.20–4.28 **COMPLETE** — all 9 foundation assignments done.
+2. 4.39 – 4.43 — Visualisation suite (the final 5 Bhargav tasks; needs Harshita's cleaned DataFrames — coordinate before starting)
 
 ### Other members
 - Harsh: 4.10, 4.11 (plus verify 4.5–4.9 matches current README)
@@ -121,6 +121,7 @@ Done: **18 / 44** (~41%)
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.25: `src/vectorization.py` — 4 loop-vs-vector rewrites (scale, pairwise add, boolean-mask filter, `np.where` conditional), `np.array_equal` correctness asserts, `time.perf_counter` benchmarks on 100k elements showing ~20–35× speed-ups; black + ruff clean; full README section added |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.26: `src/broadcasting.py` — four broadcasting cases (scalar+1D, scalar+2D, matrix+row-vector, matrix+column-vector) plus a caught `ValueError` for incompatible `(3,)`+`(4,)`; ASCII layout walk-through and right-aligned shape table in the README; black + ruff clean |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.27: `src/pandas_series.py` — 4 construction patterns (list → default index, NumPy array → dtype preserved, list + explicit labels, dict → keys as index), `iloc` vs `loc` access, boolean-mask filtering, and label-aware addition demonstrating that unmatched labels become `NaN` (dtype promoted to `float64`); black + ruff clean |
+| 2026-04-20 | Bhargav Kalambhe | Completed 4.28: `src/pandas_dataframes.py` — four DataFrame construction patterns (dict-of-lists → columns, list-of-dicts → rows with `NaN` for missing keys, dict-of-Series → typed columns with index alignment, `pd.read_csv` on `data/raw/sample_job_postings.csv`), shape/columns/index/dtypes inspection, column and row selection, and confirmation that `frame.values` is an `np.ndarray` closing the 4.22 → 4.28 arc; black + ruff clean |
 
 ---
 
