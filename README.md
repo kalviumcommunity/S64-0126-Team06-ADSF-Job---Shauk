@@ -28,6 +28,7 @@
 - [Assignment 4.21 — Structuring Python Code for Readability and Reuse](#assignment-421--structuring-python-code-for-readability-and-reuse)
 - [Assignment 4.22 — Creating NumPy Arrays from Python Lists](#assignment-422--creating-numpy-arrays-from-python-lists)
 - [Assignment 4.23 — Understanding Array Shape, Dimensions, and Index Positions](#assignment-423--understanding-array-shape-dimensions-and-index-positions)
+- [Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays](#assignment-424--performing-basic-mathematical-operations-on-numpy-arrays)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -3109,6 +3110,232 @@ python3 -m ruff check src/array_shape_indexing.py
 ### Conclusion
 
 Shape, dimensions, and indexing are the grammar of NumPy. Once the reader internalises that `shape` is a tuple of axis lengths, that `ndim == len(shape)`, and that accessing a 2-D element always reads "row first, column second", every later operation (arithmetic, vectorisation, broadcasting, reshaping, reductions) becomes a composition of these four facts. The `safe_get` helper is a small but important habit: **check the shape before you address it** — that one line of defence catches the bulk of shape-related bugs before they surface as cryptic `IndexError` traces.
+
+---
+
+## Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+With arrays created (4.22) and navigable (4.23), this assignment puts arithmetic on top of that layout. Every basic math operator (`+`, `-`, `*`, `/`, `**`) on NumPy arrays is **element-wise** and runs in vectorised C code — no Python-level loop is needed or wanted. The script walks through element-wise operations between two shape-matched arrays, scalar-to-array operations, `int`/`float` type promotion, and a domain mini-example that combines a "postings" array and a "candidates" array into a supply/demand ratio.
+
+### File Name
+
+`src/array_math.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays."""
+
+import numpy as np
+
+BANNER_WIDTH = 60
+
+
+def build_operand_arrays() -> tuple[np.ndarray, np.ndarray]:
+    """Return two shape-matched 1-D arrays to operate on."""
+    postings = np.array([120, 90, 40, 60, 20])
+    candidates = np.array([80, 75, 35, 30, 15])
+    return postings, candidates
+
+
+def element_wise_operations(left: np.ndarray, right: np.ndarray) -> dict:
+    """Return the four basic element-wise operations in one dict."""
+    return {
+        "add": left + right,
+        "subtract": left - right,
+        "multiply": left * right,
+        "divide": left / right,
+    }
+
+
+def scalar_operations(array: np.ndarray, scalar: int) -> dict:
+    """Return common scalar-to-array operations."""
+    return {
+        f"array + {scalar}": array + scalar,
+        f"array - {scalar}": array - scalar,
+        f"array * {scalar}": array * scalar,
+        f"array / {scalar}": array / scalar,
+        "array ** 2": array**2,
+    }
+
+
+def supply_demand_ratio(postings: np.ndarray, candidates: np.ndarray) -> np.ndarray:
+    """Return `postings / candidates` — a market-demand lift per skill."""
+    return postings / candidates
+
+
+def print_labelled_results(title: str, results: dict) -> None:
+    """Print a dict of `{label: array}` results under a title."""
+    print(f"\n{title}")
+    for label, value in results.items():
+        print(f"  {label:<18} -> {value}")
+
+
+def print_type_promotion_demo() -> None:
+    """Show how mixing int and float promotes the result to float."""
+    int_array = np.array([1, 2, 3])
+    float_array = np.array([0.5, 0.5, 0.5])
+    result = int_array + float_array
+    print("\nType promotion:")
+    print(f"  int_array   dtype = {int_array.dtype}")
+    print(f"  float_array dtype = {float_array.dtype}")
+    print(f"  int + float dtype = {result.dtype}   values = {result}")
+
+
+def main() -> None:
+    postings, candidates = build_operand_arrays()
+
+    print("=" * BANNER_WIDTH)
+    print("Assignment 4.24 — Basic Math on NumPy Arrays")
+    print("=" * BANNER_WIDTH)
+    print(f"\npostings   : {postings}")
+    print(f"candidates : {candidates}")
+
+    print_labelled_results(
+        "Element-wise (two arrays, same shape):",
+        element_wise_operations(postings, candidates),
+    )
+    print_labelled_results(
+        "Scalar-to-array (scalar = 10):",
+        scalar_operations(postings, 10),
+    )
+    print_type_promotion_demo()
+
+    ratio = supply_demand_ratio(postings, candidates)
+    print("\nSupply / demand lift (postings / candidates):")
+    print(f"  {ratio}")
+    print(f"  skills where demand exceeds supply: {np.sum(ratio > 1)} of {ratio.size}")
+
+    print("=" * BANNER_WIDTH)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### The One Rule: Arithmetic is Element-Wise
+
+| Operator | Two shape-matched arrays | Scalar + array |
+|---|---|---|
+| `+` | `[a0+b0, a1+b1, …]` | `[a0+k, a1+k, …]` |
+| `-` | `[a0-b0, a1-b1, …]` | `[a0-k, a1-k, …]` |
+| `*` | `[a0*b0, a1*b1, …]` | `[a0*k, a1*k, …]` |
+| `/` | `[a0/b0, a1/b1, …]` (always `float64`) | `[a0/k, a1/k, …]` |
+| `**` | power applied element-wise | `[a0**k, a1**k, …]` |
+
+There is **no** hidden reduction, no broadcasting magic (that comes in 4.26), and no Python-level loop. `a + b` runs a single vectorised C loop inside NumPy, which is typically 10–100× faster than the equivalent `[ai + bi for ai, bi in zip(a, b)]`.
+
+### Explanation of Each Part
+
+#### 1. Element-wise between two shape-matched arrays
+
+```python
+postings   = np.array([120, 90, 40, 60, 20])
+candidates = np.array([ 80, 75, 35, 30, 15])
+
+postings + candidates   # [200 165  75  90  35]
+postings - candidates   # [40 15  5 30  5]
+postings * candidates   # [9600 6750 1400 1800  300]
+postings / candidates   # [1.5 1.2 1.142… 2. 1.333…]
+```
+
+Both arrays have `shape == (5,)`. NumPy pairs them position-by-position and returns an array of the same shape. If the shapes did not match (e.g. `(5,)` and `(4,)`), NumPy would raise `ValueError: operands could not be broadcast together` — so **shape check before math** stays a good habit from 4.23.
+
+#### 2. Scalar-to-array operations
+
+```python
+array + 10   # every element + 10
+array - 10   # every element - 10
+array * 10   # every element * 10
+array / 10   # every element / 10 (always returns float64)
+array ** 2   # every element squared
+```
+
+Scalar operations are the simplest form of what 4.26 will generalise as **broadcasting** — the scalar is conceptually "stretched" to match the array's shape and then applied element-wise. No extra memory is used; NumPy does not materialise the stretched scalar.
+
+#### 3. Type promotion
+
+```python
+int_array   = np.array([1, 2, 3])        # dtype=int64
+float_array = np.array([0.5, 0.5, 0.5])  # dtype=float64
+int_array + float_array                  # dtype=float64  values=[1.5 2.5 3.5]
+```
+
+When `int` and `float` arrays are combined, the result is promoted to the **widest** type that can represent both without loss — `float64` in this case. This is the same rule Python uses for scalar arithmetic, and the reason `/` on an integer array still returns floats: the result might need fractional values, so NumPy pre-emptively promotes.
+
+#### 4. Domain mini-example: supply/demand ratio
+
+```python
+ratio = postings / candidates
+# → [1.5 1.2 1.142… 2. 1.333…]
+
+np.sum(ratio > 1)    # count of skills where demand > supply
+```
+
+`postings / candidates` is a single expression that computes the market-demand lift for every skill at once. The `ratio > 1` comparison is itself a vectorised element-wise operation returning a boolean array; `np.sum` then counts `True`s. This is the core pattern for every later analysis: **lift the loop into the operator**.
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.24 — Basic Math on NumPy Arrays
+============================================================
+
+postings   : [120  90  40  60  20]
+candidates : [80 75 35 30 15]
+
+Element-wise (two arrays, same shape):
+  add                -> [200 165  75  90  35]
+  subtract           -> [40 15  5 30  5]
+  multiply           -> [9600 6750 1400 1800  300]
+  divide             -> [1.5        1.2        1.14285714 2.         1.33333333]
+
+Scalar-to-array (scalar = 10):
+  array + 10         -> [130 100  50  70  30]
+  array - 10         -> [110  80  30  50  10]
+  array * 10         -> [1200  900  400  600  200]
+  array / 10         -> [12.  9.  4.  6.  2.]
+  array ** 2         -> [14400  8100  1600  3600   400]
+
+Type promotion:
+  int_array   dtype = int64
+  float_array dtype = float64
+  int + float dtype = float64   values = [1.5 2.5 3.5]
+
+Supply / demand lift (postings / candidates):
+  [1.5        1.2        1.14285714 2.         1.33333333]
+  skills where demand exceeds supply: 5 of 5
+============================================================
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/array_math.py
+python3 -m black src/array_math.py
+python3 -m ruff check src/array_math.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Adding arrays of different shapes without intent | `ValueError` at runtime — fix by checking `a.shape == b.shape` first |
+| Using `+` on a Python list expecting element-wise math | Returns a concatenated list — convert to array first |
+| Dividing integer arrays and assuming integer result | `/` always promotes to `float64`; use `//` for integer floor-division |
+| Looping with `for` to add two arrays | Works but is 10–100× slower and harder to read than `a + b` |
+| Forgetting that `array * 3` is element-wise, not repetition | Would be `[3 6 9]`, not `[1 2 3 1 2 3 1 2 3]` — the opposite of list `*` |
+| Mixing `int` and `float` arrays without noticing dtype change | Downstream code expecting `int` can silently receive `float64` |
+
+### Conclusion
+
+NumPy's arithmetic model is one idea expressed consistently everywhere: **every operator is element-wise**. That single rule replaces the `for` loops that dominate pure-Python numeric code, makes formulae readable as formulae (`ratio = postings / candidates`), and unlocks the C-speed inner loop NumPy was built for. The domain example — computing a supply/demand ratio in one line and counting the lifted skills in another — previews exactly how the rest of the project will reason about the labour-market data: as vectors and arrays of rates, not as items in a loop. 4.25 will make this explicit by replacing Python loops with their vectorised equivalents; 4.26 will let operations span arrays of different shapes via broadcasting.
 
 ---
 
