@@ -54,7 +54,7 @@
 | 4.20 | Writing Readable Variable Names and Comments (PEP8 Basics) | `Done` | 2026-04-20 | `src/pep8_basics.py` — BEFORE/AFTER contrast, constants, docstrings, type hints; black + ruff clean |
 | 4.21 | Structuring Python Code for Readability and Reuse | `Done` | 2026-04-20 | `src/code_structure.py` — 5-section layout (imports, constants, pure helpers, reporting, orchestration); `main()` + entry-point guard; black + ruff clean |
 | 4.22 | Creating NumPy Arrays from Python Lists | `Done` | 2026-04-20 | `src/numpy_arrays_from_lists.py` — 1D + 2D `np.array()`, `shape`/`ndim`/`size`/`dtype` inspection, list-vs-array arithmetic contrast; black + ruff clean |
-| 4.23 | Understanding Array Shape, Dimensions, and Index Positions | `Not Started` | — | |
+| 4.23 | Understanding Array Shape, Dimensions, and Index Positions | `Done` | 2026-04-20 | `src/array_shape_indexing.py` — 1D/2D layout walk-through, complete index maps, zero-based access, `:`-slicing, `safe_get` out-of-range check; black + ruff clean |
 | 4.24 | Performing Basic Mathematical Operations on NumPy Arrays | `Not Started` | — | |
 | 4.25 | Applying Vectorized Operations Instead of Python Loops | `Not Started` | — | |
 | 4.26 | Understanding NumPy Broadcasting with Simple Examples | `Not Started` | — | |
@@ -74,10 +74,10 @@
 |---|---:|---:|---:|---:|
 | Harshita Soni ★ | 0 | 0 | 15 | 15 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe | 3 | 0 | 11 | 14 |
-| **Overall** | **13** | **0** | **31** | **44** |
+| Bhargav Kalambhe | 4 | 0 | 10 | 14 |
+| **Overall** | **14** | **0** | **30** | **44** |
 
-Done: **13 / 44** (~30%)
+Done: **14 / 44** (~32%)
 
 ---
 
@@ -90,8 +90,8 @@ Done: **13 / 44** (~30%)
 ## 4. What's Remaining (priority order)
 
 ### Blocking path for Bhargav (next-up first)
-1. **4.23** — Understanding Array Shape, Dimensions, and Index Positions *(next)*
-2. 4.24 – 4.26 — NumPy arithmetic, vectorisation, broadcasting
+1. **4.24** — Performing Basic Mathematical Operations on NumPy Arrays *(next)*
+2. 4.25 – 4.26 — Vectorisation, broadcasting
 3. 4.27 – 4.28 — Pandas construction
 4. 4.39 – 4.43 — Visualisation suite (needs Harshita's cleaned DataFrames — coordinate)
 
@@ -118,6 +118,7 @@ Done: **13 / 44** (~30%)
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.20: `src/pep8_basics.py` — PEP 8 BEFORE/AFTER contrast, `UPPER_SNAKE_CASE` constant, type hints, docstrings, intent-only comments; black + ruff clean; full README section added |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.21: `src/code_structure.py` — 5-section layout (imports, constants, pure helpers, reporting functions, orchestration); `main()` + entry-point guard; pure vs side-effecting helpers split; black + ruff clean; full README section added |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.22: `src/numpy_arrays_from_lists.py` — 1D array from flat list, 2D array from nested list (3×4 sector×skill), inspection of `shape`/`ndim`/`size`/`dtype`, and list-vs-array arithmetic contrast (concatenation vs element-wise); black + ruff clean; full README section added |
+| 2026-04-20 | Bhargav Kalambhe | Completed 4.23: `src/array_shape_indexing.py` — complete 1D and 2D index maps, zero-based access, negative indices, row/column `:`-slicing, and `safe_get` defensive out-of-range check that names the offending axis and length; black + ruff clean; full README section added |
 
 ---
 
