@@ -25,6 +25,7 @@
 - [Assignment 4.18 — Defining and Calling Python Functions](#assignment-418--defining-and-calling-python-functions)
 - [Assignment 4.19 — Passing Data into Functions and Returning Results](#assignment-419--passing-data-into-functions-and-returning-results)
 - [Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics)](#assignment-420--writing-readable-variable-names-and-comments-pep8-basics)
+- [Assignment 4.21 — Structuring Python Code for Readability and Reuse](#assignment-421--structuring-python-code-for-readability-and-reuse)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -2305,6 +2306,324 @@ The `Identical result : True` line is deliberate proof: **readability changes no
 ### Conclusion
 
 PEP 8 is not about taste — it is a **team protocol**. When every contributor follows the same naming, commenting, and structure rules, the code reads like one author wrote it, and every reviewer can focus on logic instead of style. This script makes the cost of bad style visible by placing the `BEFORE` and `AFTER` side by side: identical behaviour, radically different review cost. The habit formed here — descriptive names, constants for thresholds, docstrings over inline noise, comments that explain *why* — is the foundation every later assignment in this sprint (NumPy, Pandas, visualisations) will build on.
+
+---
+
+## Assignment 4.21 — Structuring Python Code for Readability and Reuse
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Where assignment 4.20 focused on *naming* and *comments*, this assignment focuses on **structure** — the physical layout of a Python file. A well-structured script reads top-to-bottom like a story: imports first, constants next, pure helpers in the middle, reporting at the bottom, and a single `main()` that composes them. This layout makes code easier to scan, easier to test, and easier to reuse from other scripts or notebooks.
+
+### File Name
+
+`src/code_structure.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.21 — Structuring Python Code for Readability and Reuse.
+
+Author: Bhargav Kalambhe (Frontend & ML)
+Team:   Team 06 — Job-ही-Shauk (Sprint 3)
+
+Where 4.20 focused on *naming* and *comments*, this script focuses on
+*structure*: how a Python file is laid out so a reader can follow it
+top-to-bottom without jumping around. The file is organised in five
+clearly labelled sections so the flow of control is obvious:
+
+    1. Imports
+    2. Constants / configuration
+    3. Pure helper functions (no side effects)
+    4. Reporting / I/O functions
+    5. Orchestration inside main() + entry-point guard
+
+Each function does exactly one thing. The top-level is clean: `main()`
+composes the pieces, and nothing else runs at import time.
+
+Run:
+    python3 src/code_structure.py
+"""
+
+# ---------------------------------------------------------------------------
+# 1. IMPORTS — stdlib first, third-party next, local last (PEP 8).
+# ---------------------------------------------------------------------------
+from statistics import mean, median
+
+
+# ---------------------------------------------------------------------------
+# 2. CONSTANTS / CONFIGURATION — pulled out of logic so thresholds are
+#    visible, greppable, and changeable in one place.
+# ---------------------------------------------------------------------------
+TRENDING_MENTION_THRESHOLD = 5
+REPORT_WIDTH = 60
+
+
+# ---------------------------------------------------------------------------
+# 3. PURE HELPER FUNCTIONS — deterministic, no printing, no file I/O.
+# ---------------------------------------------------------------------------
+def load_sample_skill_data() -> list[dict]:
+    """Return a small hard-coded dataset so the demo is self-contained."""
+    return [
+        {"skill": "python", "mentions": 12},
+        {"skill": "sql", "mentions": 9},
+        {"skill": "excel", "mentions": 4},
+        {"skill": "tableau", "mentions": 6},
+        {"skill": "pytorch", "mentions": 2},
+        {"skill": "pandas", "mentions": 11},
+        {"skill": "aws", "mentions": 7},
+        {"skill": "docker", "mentions": 3},
+    ]
+
+
+def filter_trending_skills(
+    skill_records: list[dict], threshold: int = TRENDING_MENTION_THRESHOLD
+) -> list[dict]:
+    """Return only the records whose mention count meets the threshold."""
+    return [record for record in skill_records if record["mentions"] >= threshold]
+
+
+def compute_mention_stats(skill_records: list[dict]) -> dict:
+    """Return summary statistics across all skill mention counts."""
+    counts = [record["mentions"] for record in skill_records]
+    return {
+        "total_skills": len(counts),
+        "total_mentions": sum(counts),
+        "average_mentions": mean(counts),
+        "median_mentions": median(counts),
+        "max_mentions": max(counts),
+        "min_mentions": min(counts),
+    }
+
+
+def rank_skills_by_mentions(skill_records: list[dict]) -> list[dict]:
+    """Return the records sorted descending by mention count."""
+    return sorted(skill_records, key=lambda record: record["mentions"], reverse=True)
+
+
+# ---------------------------------------------------------------------------
+# 4. REPORTING FUNCTIONS — side-effecting (print); intentionally
+#    separated from the pure helpers above.
+# ---------------------------------------------------------------------------
+def print_section_header(title: str) -> None:
+    """Print a banner so long reports stay scannable."""
+    print("=" * REPORT_WIDTH)
+    print(title)
+    print("=" * REPORT_WIDTH)
+
+
+def print_stats_block(stats: dict) -> None:
+    """Print a formatted summary of the statistics dictionary."""
+    print(f"  Total skills tracked : {stats['total_skills']}")
+    print(f"  Total mentions       : {stats['total_mentions']}")
+    print(f"  Average mentions     : {stats['average_mentions']:.2f}")
+    print(f"  Median  mentions     : {stats['median_mentions']}")
+    print(f"  Max / Min            : {stats['max_mentions']} / {stats['min_mentions']}")
+
+
+def print_skill_ranking(ranked_records: list[dict]) -> None:
+    """Print a ranked list of skills with mention counts."""
+    for position, record in enumerate(ranked_records, start=1):
+        print(f"  {position:>2}. {record['skill']:<10} — {record['mentions']} mentions")
+
+
+# ---------------------------------------------------------------------------
+# 5. ORCHESTRATION — main() composes the helpers in reading order.
+# ---------------------------------------------------------------------------
+def main() -> None:
+    """Compose the helpers to produce the full mini-report."""
+    skill_records = load_sample_skill_data()
+
+    trending_records = filter_trending_skills(skill_records)
+    overall_stats = compute_mention_stats(skill_records)
+    ranked_records = rank_skills_by_mentions(skill_records)
+
+    print_section_header("Assignment 4.21 — Structured Skill Report")
+
+    print("\nOverall statistics:")
+    print_stats_block(overall_stats)
+
+    print("\nSkills ranked by mentions:")
+    print_skill_ranking(ranked_records)
+
+    print(f"\nTrending skills (>= {TRENDING_MENTION_THRESHOLD} mentions):")
+    print_skill_ranking(rank_skills_by_mentions(trending_records))
+
+    print("=" * REPORT_WIDTH)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### The Five-Section Layout
+
+The file is intentionally divided into five labelled sections with banner comments. Reading top to bottom, each section tells the reader *what kind* of code to expect next.
+
+| # | Section | What it contains | Why it's separated |
+|---|---|---|---|
+| 1 | Imports | `from statistics import mean, median` | PEP 8: imports belong at the top so dependencies are visible without scrolling |
+| 2 | Constants | `TRENDING_MENTION_THRESHOLD`, `REPORT_WIDTH` | Thresholds become greppable; changing a rule is a one-line edit |
+| 3 | Pure helpers | `load_sample_skill_data`, `filter_trending_skills`, `compute_mention_stats`, `rank_skills_by_mentions` | Deterministic, no printing, no I/O — easy to unit-test and reuse from a notebook |
+| 4 | Reporting | `print_section_header`, `print_stats_block`, `print_skill_ranking` | Side-effecting code isolated — swap these out for logging or file output without touching the helpers |
+| 5 | Orchestration | `main()` + `if __name__ == "__main__"` guard | Top-level stays empty; importing the module runs nothing |
+
+### Explanation of Each Part
+
+#### Imports at the top (section 1)
+
+```python
+from statistics import mean, median
+```
+
+PEP 8 requires imports at the top of the file, grouped stdlib → third-party → local with one blank line between groups. Putting imports anywhere else hides the module's real dependency surface and breaks tools that analyse imports (ruff, bandit, isort).
+
+#### Constants as configuration (section 2)
+
+```python
+TRENDING_MENTION_THRESHOLD = 5
+REPORT_WIDTH = 60
+```
+
+Lifting magic numbers into named `UPPER_SNAKE_CASE` constants has three effects:
+
+1. The *rule* is visible — "trending" means "≥ 5 mentions", not some number buried mid-function.
+2. Every usage site shows the same name, so a reader can grep for `TRENDING_MENTION_THRESHOLD` to find every policy decision that depends on it.
+3. Changing the threshold is a **one-line edit** at the top of the file, not a hunt through the logic.
+
+#### Pure helper functions (section 3)
+
+Each helper has one job and no side effects:
+
+| Function | Input | Output | Side effect |
+|---|---|---|---|
+| `load_sample_skill_data` | — | `list[dict]` | none |
+| `filter_trending_skills` | records, threshold | filtered `list[dict]` | none |
+| `compute_mention_stats` | records | summary `dict` | none |
+| `rank_skills_by_mentions` | records | sorted `list[dict]` | none |
+
+Because these functions don't print or write files, they can be called from a Jupyter notebook, composed together (see `main()`), and tested with simple `assert` statements — no mocking required. This is the **separation of concerns** principle in practice.
+
+#### Reporting functions (section 4)
+
+```python
+def print_section_header(title: str) -> None: ...
+def print_stats_block(stats: dict) -> None: ...
+def print_skill_ranking(ranked_records: list[dict]) -> None: ...
+```
+
+These functions *only* print. If the project later needs to write the same report to a file, send it to Slack, or render it in a notebook cell, only this section changes — the pure helpers are untouched.
+
+#### Orchestration in `main()` (section 5)
+
+```python
+def main() -> None:
+    skill_records = load_sample_skill_data()
+    trending_records = filter_trending_skills(skill_records)
+    overall_stats = compute_mention_stats(skill_records)
+    ranked_records = rank_skills_by_mentions(skill_records)
+
+    print_section_header("Assignment 4.21 — Structured Skill Report")
+    print("\nOverall statistics:")
+    print_stats_block(overall_stats)
+    ...
+```
+
+`main()` is the **only** place where load → filter → summarise → report happens. Reading `main()` top to bottom gives you the entire control flow of the program in under 20 lines — no surprises, no hidden globals, no code running at import.
+
+#### The entry-point guard
+
+```python
+if __name__ == "__main__":
+    main()
+```
+
+This guard means `import code_structure` from another script or notebook runs **no** side effects — no banners, no prints, nothing. The module is fully reusable as a library while still being executable as a script.
+
+### Why Structure Matters
+
+| Without structure | With structure |
+|---|---|
+| Long script with intermixed setup, logic, and printing | Five labelled sections; reader knows what each section contains |
+| Constants buried as magic numbers inside functions | Constants hoisted to the top; policy is visible |
+| Logic and I/O in the same function | Pure helpers in one block, reporting in another |
+| `main()` absent; top-level code runs on import | `main()` isolates execution; guard prevents import side effects |
+| Every change forces re-reading the whole file | Reviewer reads only the section relevant to the change |
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.21 — Structured Skill Report
+============================================================
+
+Overall statistics:
+  Total skills tracked : 8
+  Total mentions       : 54
+  Average mentions     : 6.75
+  Median  mentions     : 6.5
+  Max / Min            : 12 / 2
+
+Skills ranked by mentions:
+   1. python     — 12 mentions
+   2. pandas     — 11 mentions
+   3. sql        — 9 mentions
+   4. aws        — 7 mentions
+   5. tableau    — 6 mentions
+   6. excel      — 4 mentions
+   7. docker     — 3 mentions
+   8. pytorch    — 2 mentions
+
+Trending skills (>= 5 mentions):
+   1. python     — 12 mentions
+   2. pandas     — 11 mentions
+   3. sql        — 9 mentions
+   4. aws        — 7 mentions
+   5. tableau    — 6 mentions
+============================================================
+```
+
+The same eight skills appear in both rankings; the trending block simply reuses `rank_skills_by_mentions` on the filtered subset — a concrete demonstration that well-structured helpers compose for free.
+
+### How to Run the Script
+
+1. **From the repo root**
+   ```bash
+   cd S64-0126-Team06-ADSF-Job---Shauk
+   ```
+
+2. **Install dependencies (first time only)**
+   ```bash
+   python3 -m pip install -r requirements.txt
+   ```
+
+3. **Run**
+   ```bash
+   python3 src/code_structure.py
+   ```
+
+4. **Verify PEP 8 compliance**
+   ```bash
+   python3 -m black src/code_structure.py
+   python3 -m ruff check src/code_structure.py
+   ```
+
+### Common Structural Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Logic at module top-level instead of in `main()` | Running `import code_structure` triggers prints, reads files, or hits APIs |
+| Mixing `print()` calls into helper functions | Helpers can't be reused from a notebook or tested silently |
+| Defining constants inside functions | Same constant redefined in multiple places; drift guaranteed |
+| No `if __name__ == "__main__"` guard | Script doubles as library without protection from accidental execution |
+| One huge function that does everything | Impossible to test; every change has a large blast radius |
+| Helpers defined *after* `main()` | Reader has to scroll forward to understand `main()` — file doesn't read top-to-bottom |
+
+### Conclusion
+
+Code structure is not cosmetic — it is how a single script scales into a maintainable module. The five-section layout used here (imports → constants → pure helpers → reporting → orchestration) is a convention, not a law, but it solves the three problems that hurt readability most: hidden dependencies, magic numbers, and mixed side effects. By keeping pure logic separate from I/O, the helpers remain trivially reusable in notebooks, tests, and later pipeline stages — exactly the kind of foundation the NumPy, Pandas, and visualisation work in the rest of this sprint will build on.
 
 ---
 

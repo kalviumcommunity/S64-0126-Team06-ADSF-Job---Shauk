@@ -52,7 +52,7 @@
 | # | Task | Status | Last Updated | Notes |
 |---|---|---|---|---|
 | 4.20 | Writing Readable Variable Names and Comments (PEP8 Basics) | `Done` | 2026-04-20 | `src/pep8_basics.py` — BEFORE/AFTER contrast, constants, docstrings, type hints; black + ruff clean |
-| 4.21 | Structuring Python Code for Readability and Reuse | `Not Started` | — | |
+| 4.21 | Structuring Python Code for Readability and Reuse | `Done` | 2026-04-20 | `src/code_structure.py` — 5-section layout (imports, constants, pure helpers, reporting, orchestration); `main()` + entry-point guard; black + ruff clean |
 | 4.22 | Creating NumPy Arrays from Python Lists | `Not Started` | — | |
 | 4.23 | Understanding Array Shape, Dimensions, and Index Positions | `Not Started` | — | |
 | 4.24 | Performing Basic Mathematical Operations on NumPy Arrays | `Not Started` | — | |
@@ -74,10 +74,10 @@
 |---|---:|---:|---:|---:|
 | Harshita Soni ★ | 0 | 0 | 15 | 15 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe | 1 | 0 | 13 | 14 |
-| **Overall** | **11** | **0** | **33** | **44** |
+| Bhargav Kalambhe | 2 | 0 | 12 | 14 |
+| **Overall** | **12** | **0** | **32** | **44** |
 
-Done: **11 / 44** (~25%)
+Done: **12 / 44** (~27%)
 
 ---
 
@@ -90,8 +90,8 @@ Done: **11 / 44** (~25%)
 ## 4. What's Remaining (priority order)
 
 ### Blocking path for Bhargav (next-up first)
-1. **4.21** — Structuring Python Code for Readability and Reuse *(next)*
-2. 4.22 – 4.26 — NumPy series
+1. **4.22** — Creating NumPy Arrays from Python Lists *(next)*
+2. 4.23 – 4.26 — NumPy array operations
 3. 4.27 – 4.28 — Pandas construction
 4. 4.39 – 4.43 — Visualisation suite (needs Harshita's cleaned DataFrames — coordinate)
 
@@ -116,6 +116,7 @@ Done: **11 / 44** (~25%)
 | 2026-04-18 | Harsh Singh | Completed 4.19: `data_flow_functions.py` — parameters in, returns out, reuse and chaining |
 | 2026-04-20 | Bhargav Kalambhe | Repo hygiene: added `CLAUDE.md`, `audit.md`, `requirements.txt`; moved tracker + update log out of `README.md` |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.20: `src/pep8_basics.py` — PEP 8 BEFORE/AFTER contrast, `UPPER_SNAKE_CASE` constant, type hints, docstrings, intent-only comments; black + ruff clean; full README section added |
+| 2026-04-20 | Bhargav Kalambhe | Completed 4.21: `src/code_structure.py` — 5-section layout (imports, constants, pure helpers, reporting functions, orchestration); `main()` + entry-point guard; pure vs side-effecting helpers split; black + ruff clean; full README section added |
 
 ---
 
