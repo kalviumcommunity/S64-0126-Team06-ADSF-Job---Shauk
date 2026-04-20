@@ -1,0 +1,18 @@
+# Job-ही-Shauk — Python dependencies (Sprint 3, Module 4)
+# Install with:  python3 -m pip install -r requirements.txt
+
+# Core numerical + dataframe stack
+numpy>=1.26
+pandas>=2.1
+
+# Visualisation (Bhargav — assignments 4.39–4.43)
+matplotlib>=3.8
+seaborn>=0.13
+
+# Notebook environment (Harsh — assignments 4.7–4.10)
+jupyter>=1.0
+ipykernel>=6.29
+
+# Code style (Bhargav — assignment 4.20 PEP8)
+black>=24.0
+ruff>=0.3

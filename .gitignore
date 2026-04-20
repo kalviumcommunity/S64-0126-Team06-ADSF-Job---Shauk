@@ -1,10 +1,9 @@
+# Local IDE / planning artefacts (not team-tracked)
 .config.kiro
 design.md
 requirements.md
 tasks.md
 .env
-CLAUDE.md
-audit.md
 
 # Python
 __pycache__/
