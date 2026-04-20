@@ -31,6 +31,7 @@
 - [Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays](#assignment-424--performing-basic-mathematical-operations-on-numpy-arrays)
 - [Assignment 4.25 — Applying Vectorized Operations Instead of Python Loops](#assignment-425--applying-vectorized-operations-instead-of-python-loops)
 - [Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples](#assignment-426--understanding-numpy-broadcasting-with-simple-examples)
+- [Assignment 4.27 — Creating Pandas Series from Lists and Arrays](#assignment-427--creating-pandas-series-from-lists-and-arrays)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -3744,6 +3745,222 @@ python3 -m ruff check src/broadcasting.py
 ### Conclusion
 
 Broadcasting is the final piece of the NumPy element-wise arithmetic model. Combined with 4.22 (creating arrays), 4.23 (shape/indexing), 4.24 (basic math), and 4.25 (vectorised rewrites), it means any numeric formula the project needs — per-row normalisation, per-column standardisation, demand-vs-supply ratios across sectors and skills — can be written as a single array expression. The failing-case demo is just as important as the working cases: when broadcasting refuses, the error message names the shapes that don't align, which is usually enough to trace the caller in one step.
+
+---
+
+## Assignment 4.27 — Creating Pandas Series from Lists and Arrays
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A Pandas `Series` is Pandas' one-dimensional labelled container — the building block for every DataFrame column the project will work with. It can be thought of as a NumPy array with an attached **index**, an optional **name**, and **label-aware arithmetic**. This assignment walks through four construction patterns (list → Series, array → Series, custom labels, dict → Series), contrasts positional vs label-based access, and finishes with the single most important Series-only behaviour: adding two Series aligns values **by label**, and unmatched labels become `NaN` instead of silently zero.
+
+### File Name
+
+`src/pandas_series.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.27 — Creating Pandas Series from Lists and Arrays."""
+
+import numpy as np
+import pandas as pd
+
+BANNER_WIDTH = 60
+
+
+def series_from_list() -> pd.Series:
+    """Build a Series from a plain Python list with Pandas' default index."""
+    mention_counts = [12, 9, 4, 6, 2]
+    return pd.Series(mention_counts, name="mentions_from_list")
+
+
+def series_from_numpy_array() -> pd.Series:
+    """Build a Series from a NumPy array so the dtype carries over."""
+    mention_counts = np.array([12, 9, 4, 6, 2])
+    return pd.Series(mention_counts, name="mentions_from_array")
+
+
+def series_with_labels() -> pd.Series:
+    """Build a Series with skill names as the index instead of 0..N-1."""
+    mention_counts = [12, 9, 4, 6, 2]
+    skills = ["python", "sql", "excel", "tableau", "pytorch"]
+    return pd.Series(mention_counts, index=skills, name="mentions_by_skill")
+
+
+def series_from_dict() -> pd.Series:
+    """Build a Series from a dict — keys become the index automatically."""
+    data = {"python": 12, "sql": 9, "excel": 4, "tableau": 6, "pytorch": 2}
+    return pd.Series(data, name="mentions_from_dict")
+
+
+def demonstrate_label_alignment() -> pd.Series:
+    """Add two skill Series with overlapping but different labels."""
+    tech_mentions = pd.Series({"python": 12, "sql": 9, "tableau": 6}, name="tech")
+    finance_mentions = pd.Series({"python": 5, "sql": 11, "excel": 8}, name="finance")
+    return tech_mentions + finance_mentions
+```
+
+### Four Construction Patterns
+
+| Source | Example | Index | When to use |
+|---|---|---|---|
+| Python list | `pd.Series([12, 9, 4])` | auto `0..N-1` | quick ad-hoc data; index doesn't matter |
+| NumPy array | `pd.Series(np.array([12, 9, 4]))` | auto `0..N-1` | dtype must be preserved exactly (e.g. `int32` vs `int64`) |
+| list + `index=` | `pd.Series([12, 9, 4], index=["a", "b", "c"])` | custom labels | the values are **about** something — skills, dates, regions |
+| dict | `pd.Series({"a": 12, "b": 9, "c": 4})` | keys | data already paired with labels; shortest correct form |
+
+### Explanation of Each Part
+
+#### 1. Series from a Python list — default integer index
+
+```python
+pd.Series([12, 9, 4, 6, 2])
+# 0    12
+# 1     9
+# 2     4
+# 3     6
+# 4     2
+# dtype: int64
+```
+
+When no `index=` argument is supplied, Pandas fills one in: `RangeIndex(start=0, stop=N, step=1)`. This looks like a NumPy array, and for simple cases it behaves like one — the main difference is that the printed representation always shows the index alongside the values.
+
+#### 2. Series from a NumPy array — dtype is preserved
+
+```python
+pd.Series(np.array([12, 9, 4, 6, 2]))   # dtype: int64
+```
+
+Passing a NumPy array instead of a Python list has one useful effect: the array's dtype flows through unchanged. `np.array([1, 2, 3], dtype=np.int32)` produces a Series with `dtype=int32`; the same list would default to the platform `int64`. This matters in pipelines where downstream code depends on specific numeric precision.
+
+#### 3. Series with explicit string labels
+
+```python
+pd.Series(
+    [12, 9, 4, 6, 2],
+    index=["python", "sql", "excel", "tableau", "pytorch"],
+    name="mentions_by_skill",
+)
+```
+
+The `index=` argument replaces the default `0..N-1`. Now every value is addressed by a meaningful label (`series.loc["python"]` returns `12`). This is the form that looks like a NumPy array's cousin: same numeric payload, but with semantic addresses. The `name=` argument makes the Series self-documenting when printed and becomes the column name when the Series is later placed inside a DataFrame.
+
+#### 4. Series from a dict
+
+```python
+pd.Series({"python": 12, "sql": 9, "excel": 4, "tableau": 6, "pytorch": 2})
+```
+
+The shortest correct form when the data already has labels. Dict keys become the index; dict values become the Series values. Insertion order is preserved (Python 3.7+), so the Series prints in the order the dict was built.
+
+### Access Patterns: `iloc` vs `loc`
+
+| Accessor | Meaning | Example | Result |
+|---|---|---|---|
+| `series.iloc[i]` | **i**nteger **loc**ation — positional | `series.iloc[0]` | first value |
+| `series.loc[lbl]` | **loc**ation by label | `series.loc["python"]` | value whose label is `"python"` |
+| `series[bool]` | boolean mask | `series[series > 5]` | Series filtered to rows where `True` |
+| `series.iloc[-1]` | negative positional | `series.iloc[-1]` | last element |
+| `series.loc[a:b]` or `.iloc[a:b]` | slice (label-inclusive with `loc`, half-open with `iloc`) | `series.loc["a":"c"]` | window of elements |
+
+**Rule:** if the index contains meaningful labels, reach for `.loc`. Positional `.iloc` is right only when the "position" is what you mean (e.g. "first three rows").
+
+### Label-Aware Arithmetic — the defining feature
+
+Add two Series with **different** indexes:
+
+```python
+tech_mentions    = pd.Series({"python": 12, "sql":  9, "tableau": 6})
+finance_mentions = pd.Series({"python":  5, "sql": 11, "excel":   8})
+
+tech_mentions + finance_mentions
+# excel       NaN
+# python    17.0
+# sql       20.0
+# tableau    NaN
+# dtype: float64
+```
+
+Pandas aligns by **index label**, not by position. `"python"` appears on both sides, so `12 + 5 = 17`. `"excel"` is only on the right, so the result is `NaN`. This is the opposite of NumPy's position-based broadcasting, and it is the behaviour that makes Series safe for messy, real-world joins. (`fill_value=0` on the `.add` method is the knob to flip if you prefer zeros.)
+
+Because one side is `NaN`, the resulting dtype is promoted from `int64` to `float64` — NaN is a floating-point concept.
+
+### Series vs NumPy Array
+
+| Concern | NumPy `ndarray` | Pandas `Series` |
+|---|---|---|
+| 1-D storage | yes | yes (on top of an ndarray) |
+| Attached labels | no | yes (`.index`) |
+| Name | no | yes (`.name`) |
+| Arithmetic alignment | positional | **label-aware** |
+| Missing-value handling | no first-class `NaN` for ints | `NaN` in `float64`; `pd.NA` in nullable types |
+| Building block for | linear algebra, ML tensors | DataFrame columns |
+
+Use a Series when the data has *meaning* — skills, dates, user ids; use a NumPy array when the data is just numbers in a sequence.
+
+### Sample Output (excerpt)
+
+```
+1) Series from Python list (default 0..N-1 index):
+0    12
+1     9
+2     4
+3     6
+4     2
+Name: mentions_from_list, dtype: int64
+
+3) Series with custom string labels:
+python     12
+sql         9
+excel       4
+tableau     6
+pytorch     2
+Name: mentions_by_skill, dtype: int64
+
+Access patterns on the labelled series:
+  series.iloc[0]        -> 12   (positional, zero-based)
+  series.loc["python"]  -> 12   (by label)
+  series.iloc[-1]       -> 2    (last position)
+  series[series > 5]    ->
+python     12
+sql         9
+tableau     6
+
+5) Label-aware addition of two Series (aligned by index):
+excel       NaN
+python     17.0
+sql        20.0
+tableau     NaN
+dtype: float64
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/pandas_series.py
+python3 -m black src/pandas_series.py
+python3 -m ruff check src/pandas_series.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Using `series[0]` on a labelled Series | Returns the value with label `0`, not the first row — use `.iloc[0]` |
+| Ignoring `.name` on a Series | DataFrame columns inherit it; an unnamed Series becomes a column literally called `None` |
+| Expecting position-based arithmetic | Adding two Series aligns by **label**; mismatched labels become `NaN` |
+| Passing mixed-type data | Dtype collapses to `object` and every later operation is slow and brittle |
+| Converting a Series to list with `list(series)` to "check values" | Loses the index; prefer `series.to_dict()` or `series.reset_index()` for diagnosis |
+| Appending to a Series in a loop | Grows memory quadratically; build a list first and pass to `pd.Series` once |
+
+### Conclusion
+
+A Pandas Series is the minimum unit that understands both values and labels, and the defining difference from a NumPy array is that arithmetic aligns by label — unmatched labels become `NaN` rather than silently zero. Every DataFrame in the project is a dict of Series, so mastering construction (list, array, explicit labels, dict), access (`iloc` vs `loc`), and label-aware arithmetic is the prerequisite for the DataFrame work in 4.28 and for all of Harshita's cleaning-and-analysis assignments (4.29 onward).
 
 ---
 
