@@ -13,7 +13,6 @@
 
 ## Table of Contents
 
-- [Assignment & Task Updates](#assignment--task-updates)
 - [Overview](#overview)
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Repository Understanding Milestone](#repository-understanding-milestone)
@@ -25,6 +24,7 @@
 - [Assignment 4.17 — Using for and while Loops for Iterative Processing](#assignment-417--using-for-and-while-loops-for-iterative-processing)
 - [Assignment 4.18 — Defining and Calling Python Functions](#assignment-418--defining-and-calling-python-functions)
 - [Assignment 4.19 — Passing Data into Functions and Returning Results](#assignment-419--passing-data-into-functions-and-returning-results)
+- [Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics)](#assignment-420--writing-readable-variable-names-and-comments-pep8-basics)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -41,58 +41,6 @@
 - [License](#license)
 
 ---
-
-<!-- TEMP SECTION: Remove before final project submission -->
-## Assignment & Task Updates
-
-> **Note:** This section is temporary. It tracks ongoing assignment progress and task status for Sprint 3. Remove this section before final project submission.
-
-### Sprint 3 — Assignment Tracker
-
-| # | Assignment / Task | Owner | Status | Last Updated | Notes |
-|---|---|---|---|---|---|
-| 4.1 | | | | | |
-| 4.2 | | | | | |
-| 4.3 | | | | | |
-| 4.4 | | | | | |
-| 4.5 | Installing Python and Anaconda on the Local Machine | Harsh Singh | `Done` | 2026-04-17 | Installed via Anaconda distribution; `(base)` env confirmed |
-| 4.6 | Verifying Python, Conda, and Jupyter Installation | Harsh Singh | `Done` | 2026-04-17 | All three verified via `--version` and `conda info` commands |
-| 4.7 | Launching Jupyter Notebook and Understanding the Home Interface | Harsh Singh | `Done` | 2026-04-17 | Launched via `jupyter notebook`; Files / Running / Clusters tabs understood |
-| 4.8 | Understanding Notebook Cells: Code vs Markdown | Harsh Singh | `Done` | 2026-04-17 | Code cells, Markdown cells, LaTeX rendering, and keyboard shortcuts covered |
-| 4.9 | Running, Restarting, and Interrupting Jupyter Kernels | Harsh Singh | `Done` | 2026-04-17 | Interrupt, Restart, Restart & Run All — use cases and behaviour documented |
-| 4.10 | | | | | |
-| 4.11 | | | | | |
-| 4.12 | Organizing Raw Data, Processed Data, and Output Artifacts | Harsh Singh | `Done` | 2026-04-17 | Folder structure, data lifecycle, naming conventions, and best practices documented |
-| 4.13 | Creating and Running a First Python Script for Data Analysis | Harsh Singh | `Done` | 2026-04-18 | Wrote `student_marks_analysis.py` demonstrating variables, lists, loops, conditionals, and basic arithmetic with a printed summary report |
-| 4.14 | Understanding Python Numeric and String Data Types | Harsh Singh | `Done` | 2026-04-18 | Wrote `numeric_and_string_types.py` demonstrating int/float/str types, arithmetic, f-string formatting, and explicit type conversion with a type-mismatch example |
-| 4.15 | Working with Python Lists, Tuples, and Dictionaries | Harsh Singh | `Done` | 2026-04-18 | Wrote `collections_demo.py` demonstrating list creation and modification, tuple immutability with indexed access, and dictionary key-based access with `.get()` safety |
-| 4.16 | Writing Conditional Statements in Python | Harsh Singh | `Done` | 2026-04-18 | Wrote `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else`, and logical operators (`and`, `or`, `not`) with combined parenthesised conditions |
-| 4.17 | Using for and while Loops for Iterative Processing | Harsh Singh | `Done` | 2026-04-18 | Wrote `loops_demo.py` demonstrating `for` loops over lists and ranges, a bounded `while` loop with proper loop-variable updates, and `break`/`continue` with a `while…else` clause |
-| 4.18 | Defining and Calling Python Functions | Harsh Singh | `Done` | 2026-04-18 | Wrote `functions_demo.py` defining four reusable functions with single, multiple, default, and keyword parameters, each called outside its definition and returning a value to the caller |
-| 4.19 | Passing Data into Functions and Returning Results | Harsh Singh | `Done` | 2026-04-18 | Wrote `data_flow_functions.py` demonstrating parameters, `return` values stored in variables, and reuse via printing, further calculation, conditional decisions, and function chaining |
-
-**Status options:** `Not Started` · `In Progress` · `Under Review` · `Done`
-
----
-
-### Update Log
-
-Use this log to record significant progress, blockers, or decisions. Add a new row each time something noteworthy happens.
-
-| Date | Author | Update |
-|---|---|---|
-| 2026-04-17 | Harsh Singh | Completed assignments 4.5 – 4.9: Anaconda install, tool verification, Jupyter launch, cell types, and kernel management |
-| 2026-04-17 | Harsh Singh | Completed assignment 4.12: Documented data organization strategy — raw/processed/outputs folder structure, data lifecycle, naming conventions, and best practices |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.13: Authored and executed `student_marks_analysis.py` — a first Python script demonstrating variables, lists, a loop, a conditional, basic arithmetic, and a formatted console summary report |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.14: Authored `numeric_and_string_types.py` demonstrating integer/float/string variables, arithmetic, concatenation, f-string formatting, and a type-mismatch example fixed via `str()`, `int()`, and `float()` conversions |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.15: Authored `collections_demo.py` demonstrating Python lists (append/update/remove), tuples (indexed access and immutability check), and dictionaries (key-based access and `.get()` safe lookup) |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.16: Authored `conditional_statements.py` demonstrating basic `if`, `if-else`, `if-elif-else` ladders for temperature and grade classification, and logical operators (`and`, `or`, `not`) including a combined parenthesised condition |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.17: Authored `loops_demo.py` demonstrating `for` loops over lists and ranges, a countdown and login-attempt `while` loop with safe termination, and `break`/`continue` usage alongside a `while…else` clause |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.18: Authored `functions_demo.py` defining `greet_user`, `calculate_average`, `calculate_rectangle_area`, and `compute_final_price` — showcasing single/multiple/default parameters, return values, and keyword-argument calls |
-| 2026-04-18 | Harsh Singh | Completed assignment 4.19: Authored `data_flow_functions.py` with `calculate_total`, `apply_discount`, and `calculate_monthly_emi` — demonstrating full data flow (parameters in, `return` out, stored result reused across prints, derived calculations, conditionals, and function chaining) |
-
----
-<!-- END TEMP SECTION -->
 
 ## Overview
 
@@ -2110,6 +2058,253 @@ Follow these steps from a terminal or command prompt:
 ### Conclusion
 
 This assignment demonstrates the full data-flow cycle of a Python function: **data in, computation inside, result out, value reused**. Parameters carry input values into the function body, the logic inside transforms those inputs, `return` hands the final result back to the caller, and the caller stores that result in a variable to print it, combine it with other computations, drive conditional decisions, or pass it straight into another function. Mastering this flow is fundamental to writing modular, composable Python code and forms the foundation for every pipeline, analysis script, and backend service built later in the program.
+
+---
+
+## Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics)
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+The goal of this assignment is to demonstrate the PEP 8 basics of readable Python — descriptive `snake_case` variable names, module-level constants, purposeful docstrings, and comments that explain **intent** rather than restate code. Readable code is not decorative; it is how a team review, debug, and extend work without losing hours to "what does `x` mean here?".
+
+### File Name
+
+`src/pep8_basics.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics).
+
+Author: Bhargav Kalambhe (Frontend & ML)
+Team:   Team 06 — Job-ही-Shauk (Sprint 3)
+
+This script contrasts an unreadable "before" style with a PEP8-compliant "after"
+style on the same tiny data-science task: summarising a list of candidate skill
+counts across job postings. The two functions produce identical output; only
+naming and comment discipline change.
+
+Run:
+    python3 src/pep8_basics.py
+"""
+
+from statistics import mean
+
+
+# ---------------------------------------------------------------------------
+# BEFORE — unreadable on purpose. DO NOT write code like this in real work.
+# ---------------------------------------------------------------------------
+def f(x):
+    # loop
+    a = 0
+    b = 0
+    for i in x:
+        a = a + i  # add
+        b = b + 1  # count
+    c = a / b  # avg
+    return c
+
+
+# ---------------------------------------------------------------------------
+# AFTER — PEP8-compliant, self-documenting.
+# ---------------------------------------------------------------------------
+MIN_MENTIONS_FOR_TRENDING = 5
+
+
+def compute_average_mentions(skill_mention_counts: list[int]) -> float:
+    """Return the mean number of times a skill is mentioned across postings.
+
+    Using a descriptive parameter name plus a one-line docstring removes the
+    need for inline "what it does" comments — the signature already explains.
+    """
+    return mean(skill_mention_counts)
+
+
+def classify_skill(skill_name: str, mention_count: int) -> str:
+    """Classify a skill as trending or niche based on its mention count.
+
+    The threshold lives in a module-level UPPER_SNAKE_CASE constant so
+    non-obvious magic numbers never appear mid-logic.
+    """
+    if mention_count >= MIN_MENTIONS_FOR_TRENDING:
+        return f"{skill_name}: trending"
+    return f"{skill_name}: niche"
+
+
+def main() -> None:
+    """Entry point — keeps top-level code out of import side effects."""
+    skills = ["python", "sql", "excel", "tableau", "pytorch"]
+    mention_counts = [12, 9, 4, 6, 2]
+
+    legacy_average = f(mention_counts)
+    clean_average = compute_average_mentions(mention_counts)
+
+    print("=" * 60)
+    print("Assignment 4.20 — PEP8 Basics")
+    print("=" * 60)
+    print(f"Legacy style avg : {legacy_average:.2f}")
+    print(f"Clean  style avg : {clean_average:.2f}")
+    print(f"Identical result : {legacy_average == clean_average}")
+    print("-" * 60)
+    print("Skill classification:")
+    for skill_name, count in zip(skills, mention_counts):
+        print(f"  {classify_skill(skill_name, count)}")
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Explanation of Each Part
+
+#### 1. The `BEFORE` function — what **not** to do
+
+```python
+def f(x):
+    a = 0
+    b = 0
+    for i in x: ...
+```
+
+Every single thing about this block is a readability failure:
+
+- `f` is a verb-less, meaning-less name. A reader cannot guess what it does without reading the body.
+- `x`, `a`, `b`, `c`, `i` are all one-letter names for values that have a concrete meaning (mention counts, running total, count, average, single count).
+- The comments `# loop`, `# add`, `# count`, `# avg` narrate **what** the code does — which the code already says. They add no information.
+- There is no docstring, no type hint, no signal that this is meant for a data-science context at all.
+
+The function still *works*. But in a review, three weeks later, or when a teammate needs to extend it, every one of these micro-failures costs time.
+
+#### 2. Module-level constant — `MIN_MENTIONS_FOR_TRENDING`
+
+```python
+MIN_MENTIONS_FOR_TRENDING = 5
+```
+
+- PEP 8 says constants go at module top in `UPPER_SNAKE_CASE`.
+- Lifting the threshold out of `classify_skill` means the **rule** ("at least 5 mentions = trending") is visible at a glance and changeable in one place.
+- Without this constant the number `5` would be a **magic number** inside the function — a reader would have to guess whether `5` is the threshold, a limit, an index, or something else.
+
+#### 3. `compute_average_mentions` — naming that replaces comments
+
+```python
+def compute_average_mentions(skill_mention_counts: list[int]) -> float:
+    """Return the mean number of times a skill is mentioned across postings."""
+    return mean(skill_mention_counts)
+```
+
+- Verb-first function name (`compute_`) matches PEP 8 and signals an action.
+- Parameter name `skill_mention_counts` is explicit about both the **unit** (counts) and the **subject** (skills).
+- Type hints (`list[int]` → `float`) act as machine-checkable documentation.
+- The one-line docstring describes **what** the function returns without re-describing every line inside. The body is one expression — extra comments would be noise.
+
+#### 4. `classify_skill` — comments that explain **why**
+
+```python
+def classify_skill(skill_name: str, mention_count: int) -> str:
+    """Classify a skill as trending or niche based on its mention count.
+
+    The threshold lives in a module-level UPPER_SNAKE_CASE constant so
+    non-obvious magic numbers never appear mid-logic.
+    """
+    if mention_count >= MIN_MENTIONS_FOR_TRENDING:
+        return f"{skill_name}: trending"
+    return f"{skill_name}: niche"
+```
+
+The docstring's second sentence is an **intent** comment — it tells the reader *why* the threshold isn't inlined. This is exactly the kind of "why" PEP 8 encourages; a reader skimming the file learns the design rule without having to diff the two versions themselves.
+
+#### 5. `main()` and the `if __name__ == "__main__"` guard
+
+```python
+def main() -> None:
+    """Entry point — keeps top-level code out of import side effects."""
+    ...
+
+if __name__ == "__main__":
+    main()
+```
+
+- Isolating executable logic inside `main()` means `import pep8_basics` from another module does **not** accidentally print banners or run demos.
+- The guard makes the script both runnable *and* importable — a common PEP 8-adjacent convention that keeps your code reusable.
+
+### PEP 8 Conventions Demonstrated
+
+| Convention | Where it appears | Why it matters |
+|---|---|---|
+| `snake_case` for variables and functions | `skill_mention_counts`, `compute_average_mentions`, `classify_skill` | Consistent casing lets a reader distinguish names from types/classes at a glance |
+| `UPPER_SNAKE_CASE` for constants | `MIN_MENTIONS_FOR_TRENDING` | Constants stand out; magic numbers are eliminated |
+| Descriptive, verb-first function names | `compute_average_mentions`, `classify_skill` | Names communicate action; reduces need for inline comments |
+| Module-level docstring | first triple-quoted string | Explains purpose, authorship, and run command without opening another file |
+| Function docstrings | each `def` | Single source of truth for what the function does and returns |
+| Type hints on signatures | `list[int] -> float`, `str, int -> str` | Makes intent machine-checkable; catches wrong-type calls early |
+| Grouped imports | `from statistics import mean` at top | PEP 8 requires imports at the top, grouped stdlib → third-party → local |
+| Four-space indentation, no tabs | throughout | PEP 8 baseline; prevents mixed-indent `TabError` in Python 3 |
+| Line length ≤ 100 chars | throughout | Keeps code readable in side-by-side diffs |
+| Two blank lines between top-level defs | throughout | PEP 8 visual separation between functions |
+| Comments explain **why**, not **what** | `# BEFORE — unreadable on purpose.`, classify_skill docstring | Comments add information the code cannot; they do not re-narrate it |
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.20 — PEP8 Basics
+============================================================
+Legacy style avg : 6.60
+Clean  style avg : 6.60
+Identical result : True
+------------------------------------------------------------
+Skill classification:
+  python: trending
+  sql: trending
+  excel: niche
+  tableau: trending
+  pytorch: niche
+============================================================
+```
+
+The `Identical result : True` line is deliberate proof: **readability changes nothing about correctness**. Both `f()` and `compute_average_mentions()` compute the same arithmetic mean. What changes is everything *around* the computation — and that is the only part a human ever reads.
+
+### How to Run the Script
+
+1. **Clone or open the repository**
+   ```bash
+   cd S64-0126-Team06-ADSF-Job---Shauk
+   ```
+
+2. **Install dependencies (first time only)**
+   ```bash
+   python3 -m pip install -r requirements.txt
+   ```
+
+3. **Run the script**
+   ```bash
+   python3 src/pep8_basics.py
+   ```
+
+4. **Format + lint (optional, verifies PEP 8 compliance)**
+   ```bash
+   python3 -m black src/pep8_basics.py
+   python3 -m ruff check src/pep8_basics.py
+   ```
+
+### Common Readability Mistakes (Avoided Here)
+
+| Mistake | Example | Why it hurts |
+|---|---|---|
+| One-letter variable names outside loop counters | `x`, `tmp`, `val` | Reader cannot infer purpose without re-reading context |
+| Comments restating the code | `a = a + i  # add` | Adds visual noise, drifts out of date, hides real intent |
+| Magic numbers mid-logic | `if count >= 5:` | Threshold rule is hidden; changing it requires grepping |
+| Top-level executable code | logic outside `main()` | Running side effects trigger on import |
+| Mixed casing | `MaxCount`, `max_count`, `MAXCOUNT` in same file | Reader has to guess convention; reviewers waste cycles |
+| Commented-out dead code | `# old_function(data)` | Version control already tracks history; dead code rots |
+
+### Conclusion
+
+PEP 8 is not about taste — it is a **team protocol**. When every contributor follows the same naming, commenting, and structure rules, the code reads like one author wrote it, and every reviewer can focus on logic instead of style. This script makes the cost of bad style visible by placing the `BEFORE` and `AFTER` side by side: identical behaviour, radically different review cost. The habit formed here — descriptive names, constants for thresholds, docstrings over inline noise, comments that explain *why* — is the foundation every later assignment in this sprint (NumPy, Pandas, visualisations) will build on.
 
 ---
 
