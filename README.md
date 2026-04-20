@@ -27,6 +27,8 @@
 - [Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics)](#assignment-420--writing-readable-variable-names-and-comments-pep8-basics)
 - [Assignment 4.21 — Structuring Python Code for Readability and Reuse](#assignment-421--structuring-python-code-for-readability-and-reuse)
 - [Assignment 4.22 — Creating NumPy Arrays from Python Lists](#assignment-422--creating-numpy-arrays-from-python-lists)
+- [Assignment 4.23 — Understanding Array Shape, Dimensions, and Index Positions](#assignment-423--understanding-array-shape-dimensions-and-index-positions)
+- [Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays](#assignment-424--performing-basic-mathematical-operations-on-numpy-arrays)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -2866,6 +2868,474 @@ Why arrays, not lists, for numeric work:
 ### Conclusion
 
 The jump from Python lists to NumPy arrays is small in code (`np.array(...)`) but enormous in capability: element-wise math, explicit shapes, homogeneous dtypes, and a shared substrate for every downstream library. Keeping the pattern tight — import as `np`, build with `np.array`, inspect `shape` / `ndim` / `size` / `dtype` before acting — prevents the silent shape bugs that make NumPy code hard to debug later. The 1-D and 2-D fixtures built here will be reused in the next several assignments on shape/indexing (4.23), arithmetic (4.24), vectorisation (4.25), and broadcasting (4.26).
+
+---
+
+## Assignment 4.23 — Understanding Array Shape, Dimensions, and Index Positions
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Where 4.22 focused on **creating** arrays, this assignment focuses on **navigating** them safely. Every NumPy bug eventually traces back to one of four questions: *what is the shape?*, *how many dimensions?*, *what position am I actually addressing?*, *is this index in range?*. The script walks through 1-D and 2-D arrays, prints a complete index map for each, and demonstrates zero-based access, row/column slicing, negative indices, and a defensive check against out-of-range access.
+
+### File Name
+
+`src/array_shape_indexing.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.23 — Understanding Array Shape, Dimensions, and Index Positions.
+
+Author: Bhargav Kalambhe (Frontend & ML)
+Team:   Team 06 — Job-ही-Shauk (Sprint 3)
+"""
+
+import numpy as np
+
+BANNER_WIDTH = 60
+
+
+def build_sample_arrays() -> tuple[np.ndarray, np.ndarray]:
+    """Return a 1-D array (skill mentions) and a 2-D array (sector x skill)."""
+    one_d = np.array([12, 9, 4, 6, 2, 11, 7, 3])
+    two_d = np.array(
+        [
+            [12, 9, 4, 6],   # row 0 — tech
+            [5, 11, 8, 3],   # row 1 — finance
+            [2, 4, 10, 7],   # row 2 — healthcare
+        ]
+    )
+    return one_d, two_d
+
+
+def describe_layout(array: np.ndarray) -> dict:
+    """Return the four layout facts every NumPy user checks first."""
+    return {
+        "shape": array.shape,
+        "ndim": array.ndim,
+        "size": array.size,
+        "dtype": array.dtype,
+    }
+
+
+def safe_get(array: np.ndarray, *indices: int) -> object:
+    """Return array[*indices] or a helpful message if out-of-range."""
+    for axis_position, index in enumerate(indices):
+        axis_length = array.shape[axis_position]
+        if index < 0 or index >= axis_length:
+            return (
+                f"<out of range on axis {axis_position}: "
+                f"index {index}, length {axis_length}>"
+            )
+    return array[indices]
+
+
+def print_layout_block(label: str, array: np.ndarray) -> None:
+    """Print shape / ndim / size / dtype for one array."""
+    layout = describe_layout(array)
+    print(f"\n{label}")
+    print(f"  values : {array.tolist()}")
+    print(f"  shape  : {layout['shape']}")
+    print(f"  ndim   : {layout['ndim']}")
+    print(f"  size   : {layout['size']}")
+    print(f"  dtype  : {layout['dtype']}")
+
+
+def print_one_d_index_map(array: np.ndarray) -> None:
+    """Show each 1-D element paired with its integer index."""
+    print("\n1-D index map (position -> value):")
+    for position, value in enumerate(array):
+        print(f"  [{position}] -> {value}")
+
+
+def print_two_d_index_map(array: np.ndarray) -> None:
+    """Show each 2-D element paired with its (row, col) index."""
+    print("\n2-D index map ((row, col) -> value):")
+    rows, cols = array.shape
+    for row_index in range(rows):
+        for col_index in range(cols):
+            print(f"  [{row_index}, {col_index}] -> {array[row_index, col_index]}")
+
+
+def print_access_examples(one_d: np.ndarray, two_d: np.ndarray) -> None:
+    """Demonstrate zero-based access, the :-slice, and out-of-range handling."""
+    print("\nAccess examples:")
+    print(f"  one_d[0]          -> {one_d[0]}   (first element, zero-based)")
+    print(f"  one_d[-1]         -> {one_d[-1]}   (last element, negative index)")
+    print(f"  two_d[0]          -> {two_d[0].tolist()}   (entire first row)")
+    print(f"  two_d[:, 0]       -> {two_d[:, 0].tolist()}   (entire first column)")
+    print(f"  two_d[1, 2]       -> {two_d[1, 2]}   (row 1, col 2)")
+    print(f"  two_d[9, 0] safe  -> {safe_get(two_d, 9, 0)}")
+
+
+def main() -> None:
+    """Build the fixtures, describe their layout, and walk through indexing."""
+    one_d, two_d = build_sample_arrays()
+
+    print("=" * BANNER_WIDTH)
+    print("Assignment 4.23 — Array Shape, Dimensions, Index Positions")
+    print("=" * BANNER_WIDTH)
+
+    print_layout_block("1-D array: flat skill mention counts", one_d)
+    print_layout_block("2-D array: mentions by sector x skill", two_d)
+
+    print_one_d_index_map(one_d)
+    print_two_d_index_map(two_d)
+    print_access_examples(one_d, two_d)
+
+    print("=" * BANNER_WIDTH)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### Shape, Dimensions, Size, Dtype — One Sentence Each
+
+| Property | What it is | 1-D example `(8,)` | 2-D example `(3, 4)` |
+|---|---|---|---|
+| `shape` | tuple of axis lengths, left-to-right | `(8,)` — one axis, length 8 | `(3, 4)` — 3 rows, 4 columns |
+| `ndim` | number of axes; equal to `len(shape)` | `1` | `2` |
+| `size` | total elements; equal to product of `shape` | `8` | `12` |
+| `dtype` | element type; promoted to the widest needed | `int64` | `int64` |
+
+**Rule of thumb:** always check `shape` *before* indexing. Every shape bug is a mismatch between what you assumed and what `shape` actually reports.
+
+### Visualising the Layout
+
+**1-D array — a single row of positions:**
+
+```
+index :  [0]  [1]  [2]  [3]  [4]  [5]  [6]  [7]
+value :   12    9    4    6    2   11    7    3
+```
+
+Access is `array[index]`. `array[0]` is the first element; `array[-1]` is the last (Python wraps negative indices around the last axis).
+
+**2-D array — rows first, then columns:**
+
+```
+                 col 0   col 1   col 2   col 3
+row 0 (tech)       12       9       4       6
+row 1 (finance)     5      11       8       3
+row 2 (health)      2       4      10       7
+```
+
+Access is `array[row, col]`. The **row index comes first** — NumPy follows the same convention as mathematics and spreadsheets. `array[1, 2]` means row 1, column 2 → `8`.
+
+**Slicing an entire axis with `:`**
+
+- `two_d[0]` or `two_d[0, :]` → the entire first row `[12, 9, 4, 6]`
+- `two_d[:, 0]` → the entire first column `[12, 5, 2]`
+
+The colon (`:`) means "all indices on this axis"; it is the single most useful NumPy idiom.
+
+### Indexing Rules Demonstrated
+
+| Rule | Example in script | Output |
+|---|---|---|
+| Zero-based | `one_d[0]` | `12` |
+| Negative wraps to end | `one_d[-1]` | `3` |
+| 2-D: `(row, col)` order | `two_d[1, 2]` | `8` |
+| `:` selects a whole axis | `two_d[:, 0]` | `[12, 5, 2]` |
+| Check shape before access | `safe_get(two_d, 9, 0)` | `<out of range on axis 0: index 9, length 3>` |
+
+The `safe_get` helper encodes the defensive pattern: **compare the index against `array.shape[axis]` before dereferencing**. Plain `two_d[9, 0]` would raise `IndexError`; the helper returns a message that names the exact axis and length, which is the information a debugger needs.
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.23 — Array Shape, Dimensions, Index Positions
+============================================================
+
+1-D array: flat skill mention counts
+  values : [12, 9, 4, 6, 2, 11, 7, 3]
+  shape  : (8,)
+  ndim   : 1
+  size   : 8
+  dtype  : int64
+
+2-D array: mentions by sector x skill
+  values : [[12, 9, 4, 6], [5, 11, 8, 3], [2, 4, 10, 7]]
+  shape  : (3, 4)
+  ndim   : 2
+  size   : 12
+  dtype  : int64
+
+1-D index map (position -> value):
+  [0] -> 12
+  [1] -> 9
+  ...
+  [7] -> 3
+
+2-D index map ((row, col) -> value):
+  [0, 0] -> 12
+  [0, 1] -> 9
+  ...
+  [2, 3] -> 7
+
+Access examples:
+  one_d[0]          -> 12   (first element, zero-based)
+  one_d[-1]         -> 3    (last element, negative index)
+  two_d[0]          -> [12, 9, 4, 6]   (entire first row)
+  two_d[:, 0]       -> [12, 5, 2]      (entire first column)
+  two_d[1, 2]       -> 8    (row 1, col 2)
+  two_d[9, 0] safe  -> <out of range on axis 0: index 9, length 3>
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/array_shape_indexing.py
+python3 -m black src/array_shape_indexing.py
+python3 -m ruff check src/array_shape_indexing.py
+```
+
+### Common Indexing Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Confusing `(N,)` with `(N, 1)` | Indexing with two positions on a 1-D array raises `IndexError` |
+| Using `array[row][col]` instead of `array[row, col]` | Works but creates an intermediate row view; slower and obscures intent |
+| Forgetting that NumPy is zero-based | Off-by-one errors where the "first" row is actually row 0 |
+| Indexing by column first | `array[col, row]` looks plausible but violates every NumPy convention |
+| Assuming `array[-1]` is always safe | It is — but only if the array has at least one element |
+| Using out-of-range positive indices without checking `shape` | `IndexError` at runtime instead of a meaningful validation message |
+
+### Conclusion
+
+Shape, dimensions, and indexing are the grammar of NumPy. Once the reader internalises that `shape` is a tuple of axis lengths, that `ndim == len(shape)`, and that accessing a 2-D element always reads "row first, column second", every later operation (arithmetic, vectorisation, broadcasting, reshaping, reductions) becomes a composition of these four facts. The `safe_get` helper is a small but important habit: **check the shape before you address it** — that one line of defence catches the bulk of shape-related bugs before they surface as cryptic `IndexError` traces.
+
+---
+
+## Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+With arrays created (4.22) and navigable (4.23), this assignment puts arithmetic on top of that layout. Every basic math operator (`+`, `-`, `*`, `/`, `**`) on NumPy arrays is **element-wise** and runs in vectorised C code — no Python-level loop is needed or wanted. The script walks through element-wise operations between two shape-matched arrays, scalar-to-array operations, `int`/`float` type promotion, and a domain mini-example that combines a "postings" array and a "candidates" array into a supply/demand ratio.
+
+### File Name
+
+`src/array_math.py`
+
+### Full Python Script
+
+```python
+"""Assignment 4.24 — Performing Basic Mathematical Operations on NumPy Arrays."""
+
+import numpy as np
+
+BANNER_WIDTH = 60
+
+
+def build_operand_arrays() -> tuple[np.ndarray, np.ndarray]:
+    """Return two shape-matched 1-D arrays to operate on."""
+    postings = np.array([120, 90, 40, 60, 20])
+    candidates = np.array([80, 75, 35, 30, 15])
+    return postings, candidates
+
+
+def element_wise_operations(left: np.ndarray, right: np.ndarray) -> dict:
+    """Return the four basic element-wise operations in one dict."""
+    return {
+        "add": left + right,
+        "subtract": left - right,
+        "multiply": left * right,
+        "divide": left / right,
+    }
+
+
+def scalar_operations(array: np.ndarray, scalar: int) -> dict:
+    """Return common scalar-to-array operations."""
+    return {
+        f"array + {scalar}": array + scalar,
+        f"array - {scalar}": array - scalar,
+        f"array * {scalar}": array * scalar,
+        f"array / {scalar}": array / scalar,
+        "array ** 2": array**2,
+    }
+
+
+def supply_demand_ratio(postings: np.ndarray, candidates: np.ndarray) -> np.ndarray:
+    """Return `postings / candidates` — a market-demand lift per skill."""
+    return postings / candidates
+
+
+def print_labelled_results(title: str, results: dict) -> None:
+    """Print a dict of `{label: array}` results under a title."""
+    print(f"\n{title}")
+    for label, value in results.items():
+        print(f"  {label:<18} -> {value}")
+
+
+def print_type_promotion_demo() -> None:
+    """Show how mixing int and float promotes the result to float."""
+    int_array = np.array([1, 2, 3])
+    float_array = np.array([0.5, 0.5, 0.5])
+    result = int_array + float_array
+    print("\nType promotion:")
+    print(f"  int_array   dtype = {int_array.dtype}")
+    print(f"  float_array dtype = {float_array.dtype}")
+    print(f"  int + float dtype = {result.dtype}   values = {result}")
+
+
+def main() -> None:
+    postings, candidates = build_operand_arrays()
+
+    print("=" * BANNER_WIDTH)
+    print("Assignment 4.24 — Basic Math on NumPy Arrays")
+    print("=" * BANNER_WIDTH)
+    print(f"\npostings   : {postings}")
+    print(f"candidates : {candidates}")
+
+    print_labelled_results(
+        "Element-wise (two arrays, same shape):",
+        element_wise_operations(postings, candidates),
+    )
+    print_labelled_results(
+        "Scalar-to-array (scalar = 10):",
+        scalar_operations(postings, 10),
+    )
+    print_type_promotion_demo()
+
+    ratio = supply_demand_ratio(postings, candidates)
+    print("\nSupply / demand lift (postings / candidates):")
+    print(f"  {ratio}")
+    print(f"  skills where demand exceeds supply: {np.sum(ratio > 1)} of {ratio.size}")
+
+    print("=" * BANNER_WIDTH)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+### The One Rule: Arithmetic is Element-Wise
+
+| Operator | Two shape-matched arrays | Scalar + array |
+|---|---|---|
+| `+` | `[a0+b0, a1+b1, …]` | `[a0+k, a1+k, …]` |
+| `-` | `[a0-b0, a1-b1, …]` | `[a0-k, a1-k, …]` |
+| `*` | `[a0*b0, a1*b1, …]` | `[a0*k, a1*k, …]` |
+| `/` | `[a0/b0, a1/b1, …]` (always `float64`) | `[a0/k, a1/k, …]` |
+| `**` | power applied element-wise | `[a0**k, a1**k, …]` |
+
+There is **no** hidden reduction, no broadcasting magic (that comes in 4.26), and no Python-level loop. `a + b` runs a single vectorised C loop inside NumPy, which is typically 10–100× faster than the equivalent `[ai + bi for ai, bi in zip(a, b)]`.
+
+### Explanation of Each Part
+
+#### 1. Element-wise between two shape-matched arrays
+
+```python
+postings   = np.array([120, 90, 40, 60, 20])
+candidates = np.array([ 80, 75, 35, 30, 15])
+
+postings + candidates   # [200 165  75  90  35]
+postings - candidates   # [40 15  5 30  5]
+postings * candidates   # [9600 6750 1400 1800  300]
+postings / candidates   # [1.5 1.2 1.142… 2. 1.333…]
+```
+
+Both arrays have `shape == (5,)`. NumPy pairs them position-by-position and returns an array of the same shape. If the shapes did not match (e.g. `(5,)` and `(4,)`), NumPy would raise `ValueError: operands could not be broadcast together` — so **shape check before math** stays a good habit from 4.23.
+
+#### 2. Scalar-to-array operations
+
+```python
+array + 10   # every element + 10
+array - 10   # every element - 10
+array * 10   # every element * 10
+array / 10   # every element / 10 (always returns float64)
+array ** 2   # every element squared
+```
+
+Scalar operations are the simplest form of what 4.26 will generalise as **broadcasting** — the scalar is conceptually "stretched" to match the array's shape and then applied element-wise. No extra memory is used; NumPy does not materialise the stretched scalar.
+
+#### 3. Type promotion
+
+```python
+int_array   = np.array([1, 2, 3])        # dtype=int64
+float_array = np.array([0.5, 0.5, 0.5])  # dtype=float64
+int_array + float_array                  # dtype=float64  values=[1.5 2.5 3.5]
+```
+
+When `int` and `float` arrays are combined, the result is promoted to the **widest** type that can represent both without loss — `float64` in this case. This is the same rule Python uses for scalar arithmetic, and the reason `/` on an integer array still returns floats: the result might need fractional values, so NumPy pre-emptively promotes.
+
+#### 4. Domain mini-example: supply/demand ratio
+
+```python
+ratio = postings / candidates
+# → [1.5 1.2 1.142… 2. 1.333…]
+
+np.sum(ratio > 1)    # count of skills where demand > supply
+```
+
+`postings / candidates` is a single expression that computes the market-demand lift for every skill at once. The `ratio > 1` comparison is itself a vectorised element-wise operation returning a boolean array; `np.sum` then counts `True`s. This is the core pattern for every later analysis: **lift the loop into the operator**.
+
+### Sample Output
+
+```
+============================================================
+Assignment 4.24 — Basic Math on NumPy Arrays
+============================================================
+
+postings   : [120  90  40  60  20]
+candidates : [80 75 35 30 15]
+
+Element-wise (two arrays, same shape):
+  add                -> [200 165  75  90  35]
+  subtract           -> [40 15  5 30  5]
+  multiply           -> [9600 6750 1400 1800  300]
+  divide             -> [1.5        1.2        1.14285714 2.         1.33333333]
+
+Scalar-to-array (scalar = 10):
+  array + 10         -> [130 100  50  70  30]
+  array - 10         -> [110  80  30  50  10]
+  array * 10         -> [1200  900  400  600  200]
+  array / 10         -> [12.  9.  4.  6.  2.]
+  array ** 2         -> [14400  8100  1600  3600   400]
+
+Type promotion:
+  int_array   dtype = int64
+  float_array dtype = float64
+  int + float dtype = float64   values = [1.5 2.5 3.5]
+
+Supply / demand lift (postings / candidates):
+  [1.5        1.2        1.14285714 2.         1.33333333]
+  skills where demand exceeds supply: 5 of 5
+============================================================
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/array_math.py
+python3 -m black src/array_math.py
+python3 -m ruff check src/array_math.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Adding arrays of different shapes without intent | `ValueError` at runtime — fix by checking `a.shape == b.shape` first |
+| Using `+` on a Python list expecting element-wise math | Returns a concatenated list — convert to array first |
+| Dividing integer arrays and assuming integer result | `/` always promotes to `float64`; use `//` for integer floor-division |
+| Looping with `for` to add two arrays | Works but is 10–100× slower and harder to read than `a + b` |
+| Forgetting that `array * 3` is element-wise, not repetition | Would be `[3 6 9]`, not `[1 2 3 1 2 3 1 2 3]` — the opposite of list `*` |
+| Mixing `int` and `float` arrays without noticing dtype change | Downstream code expecting `int` can silently receive `float64` |
+
+### Conclusion
+
+NumPy's arithmetic model is one idea expressed consistently everywhere: **every operator is element-wise**. That single rule replaces the `for` loops that dominate pure-Python numeric code, makes formulae readable as formulae (`ratio = postings / candidates`), and unlocks the C-speed inner loop NumPy was built for. The domain example — computing a supply/demand ratio in one line and counting the lifted skills in another — previews exactly how the rest of the project will reason about the labour-market data: as vectors and arrays of rates, not as items in a loop. 4.25 will make this explicit by replacing Python loops with their vectorised equivalents; 4.26 will let operations span arrays of different shapes via broadcasting.
 
 ---
 
