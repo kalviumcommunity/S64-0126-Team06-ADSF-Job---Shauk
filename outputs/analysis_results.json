@@ -1,0 +1,19 @@
+{
+    "skill_frequencies": {
+        "Python": 2,
+        "SQL": 2,
+        "Machine Learning": 1,
+        "TensorFlow": 1,
+        "Deep Learning": 1,
+        "Excel": 1,
+        "Data Analysis": 1
+    },
+    "avg_salary_by_sector": {
+        "Finance": 7.0,
+        "Technology": 15.0
+    },
+    "sector_distribution": {
+        "Technology": 2,
+        "Finance": 1
+    }
+}
