@@ -1,81 +1,44 @@
-"""Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics).
-
-Author: Bhargav Kalambhe (Frontend & ML)
-Team:   Team 06 — Job-ही-Shauk (Sprint 3)
-
-This script contrasts an unreadable "before" style with a PEP8-compliant "after"
-style on the same tiny data-science task: summarising a list of candidate skill
-counts across job postings. The two functions produce identical output; only
-naming and comment discipline change.
+"""Assignment 4.20 - Readable variable names and comments.
 
 Run:
-    python3 src/pep8_basics.py
+    python src/pep8_basics.py
 """
 
-from statistics import mean
+PASSING_SCORE_THRESHOLD = 50
 
 
-# ---------------------------------------------------------------------------
-# BEFORE — unreadable on purpose. DO NOT write code like this in real work.
-# ---------------------------------------------------------------------------
-def f(x):
-    # loop
-    a = 0
-    b = 0
-    for i in x:
-        a = a + i  # add
-        b = b + 1  # count
-    c = a / b  # avg
-    return c
+def calculate_class_average(student_scores: list[int]) -> float:
+    """Return the average score for all students."""
+    return sum(student_scores) / len(student_scores)
 
 
-# ---------------------------------------------------------------------------
-# AFTER — PEP8-compliant, self-documenting.
-# ---------------------------------------------------------------------------
-MIN_MENTIONS_FOR_TRENDING = 5
+def get_pass_fail_label(student_score: int) -> str:
+    """Return pass/fail label using a shared threshold rule."""
+    # Keeping this threshold in one constant avoids hidden magic numbers.
+    if student_score >= PASSING_SCORE_THRESHOLD:
+        return "pass"
+    return "fail"
 
 
-def compute_average_mentions(skill_mention_counts: list[int]) -> float:
-    """Return the mean number of times a skill is mentioned across postings.
-
-    Using a descriptive parameter name plus a one-line docstring removes the
-    need for inline "what it does" comments — the signature already explains.
-    """
-    return mean(skill_mention_counts)
-
-
-def classify_skill(skill_name: str, mention_count: int) -> str:
-    """Classify a skill as trending or niche based on its mention count.
-
-    The threshold lives in a module-level UPPER_SNAKE_CASE constant so
-    non-obvious magic numbers never appear mid-logic.
-    """
-    if mention_count >= MIN_MENTIONS_FOR_TRENDING:
-        return f"{skill_name}: trending"
-    return f"{skill_name}: niche"
+def print_student_report(student_names: list[str], student_scores: list[int]) -> None:
+    """Print each student with score and pass/fail status."""
+    for student_name, student_score in zip(student_names, student_scores):
+        pass_fail_label = get_pass_fail_label(student_score)
+        print(f"{student_name:<8} | score: {student_score:>3} | {pass_fail_label}")
 
 
 def main() -> None:
-    """Entry point — keeps top-level code out of import side effects."""
-    skills = ["python", "sql", "excel", "tableau", "pytorch"]
-    mention_counts = [12, 9, 4, 6, 2]
+    """Run a small, readability-focused example."""
+    student_names = ["Aarav", "Diya", "Kabir", "Meera", "Riya"]
+    student_scores = [72, 45, 88, 51, 39]
 
-    # Side-by-side demonstration: both styles return the same number,
-    # but only one survives a code review.
-    legacy_average = f(mention_counts)
-    clean_average = compute_average_mentions(mention_counts)
+    class_average_score = calculate_class_average(student_scores)
 
-    print("=" * 60)
-    print("Assignment 4.20 — PEP8 Basics")
-    print("=" * 60)
-    print(f"Legacy style avg : {legacy_average:.2f}")
-    print(f"Clean  style avg : {clean_average:.2f}")
-    print(f"Identical result : {legacy_average == clean_average}")
-    print("-" * 60)
-    print("Skill classification:")
-    for skill_name, count in zip(skills, mention_counts):
-        print(f"  {classify_skill(skill_name, count)}")
-    print("=" * 60)
+    print("Assignment 4.20 - PEP 8 Basics")
+    print("-" * 45)
+    print_student_report(student_names, student_scores)
+    print("-" * 45)
+    print(f"Class average score: {class_average_score:.2f}")
 
 
 if __name__ == "__main__":

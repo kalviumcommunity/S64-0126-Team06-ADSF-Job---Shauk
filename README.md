@@ -2075,7 +2075,7 @@ This assignment demonstrates the full data-flow cycle of a Python function: **da
 
 ### Objective
 
-The goal of this assignment is to demonstrate the PEP 8 basics of readable Python — descriptive `snake_case` variable names, module-level constants, purposeful docstrings, and comments that explain **intent** rather than restate code. Readable code is not decorative; it is how a team review, debug, and extend work without losing hours to "what does `x` mean here?".
+This assignment demonstrates readable Python using clear `snake_case` variable names, one shared constant in `UPPER_SNAKE_CASE`, and minimal comments that explain intent (not obvious mechanics). The focus is code clarity and team-friendly readability.
 
 ### File Name
 
@@ -2084,276 +2084,124 @@ The goal of this assignment is to demonstrate the PEP 8 basics of readable Pytho
 ### Full Python Script
 
 ```python
-"""Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics).
-
-Author: Bhargav Kalambhe (Frontend & ML)
-Team:   Team 06 — Job-ही-Shauk (Sprint 3)
-
-This script contrasts an unreadable "before" style with a PEP8-compliant "after"
-style on the same tiny data-science task: summarising a list of candidate skill
-counts across job postings. The two functions produce identical output; only
-naming and comment discipline change.
+"""Assignment 4.20 - Readable variable names and comments.
 
 Run:
-    python3 src/pep8_basics.py
+    python src/pep8_basics.py
 """
 
-from statistics import mean
+PASSING_SCORE_THRESHOLD = 50
 
 
-# ---------------------------------------------------------------------------
-# BEFORE — unreadable on purpose. DO NOT write code like this in real work.
-# ---------------------------------------------------------------------------
-def f(x):
-    # loop
-    a = 0
-    b = 0
-    for i in x:
-        a = a + i  # add
-        b = b + 1  # count
-    c = a / b  # avg
-    return c
+def calculate_class_average(student_scores: list[int]) -> float:
+    """Return the average score for all students."""
+    return sum(student_scores) / len(student_scores)
 
 
-# ---------------------------------------------------------------------------
-# AFTER — PEP8-compliant, self-documenting.
-# ---------------------------------------------------------------------------
-MIN_MENTIONS_FOR_TRENDING = 5
+def get_pass_fail_label(student_score: int) -> str:
+    """Return pass/fail label using a shared threshold rule."""
+    # Keeping this threshold in one constant avoids hidden magic numbers.
+    if student_score >= PASSING_SCORE_THRESHOLD:
+        return "pass"
+    return "fail"
 
 
-def compute_average_mentions(skill_mention_counts: list[int]) -> float:
-    """Return the mean number of times a skill is mentioned across postings.
-
-    Using a descriptive parameter name plus a one-line docstring removes the
-    need for inline "what it does" comments — the signature already explains.
-    """
-    return mean(skill_mention_counts)
-
-
-def classify_skill(skill_name: str, mention_count: int) -> str:
-    """Classify a skill as trending or niche based on its mention count.
-
-    The threshold lives in a module-level UPPER_SNAKE_CASE constant so
-    non-obvious magic numbers never appear mid-logic.
-    """
-    if mention_count >= MIN_MENTIONS_FOR_TRENDING:
-        return f"{skill_name}: trending"
-    return f"{skill_name}: niche"
+def print_student_report(student_names: list[str], student_scores: list[int]) -> None:
+    """Print each student with score and pass/fail status."""
+    for student_name, student_score in zip(student_names, student_scores):
+        pass_fail_label = get_pass_fail_label(student_score)
+        print(f"{student_name:<8} | score: {student_score:>3} | {pass_fail_label}")
 
 
 def main() -> None:
-    """Entry point — keeps top-level code out of import side effects."""
-    skills = ["python", "sql", "excel", "tableau", "pytorch"]
-    mention_counts = [12, 9, 4, 6, 2]
+    """Run a small, readability-focused example."""
+    student_names = ["Aarav", "Diya", "Kabir", "Meera", "Riya"]
+    student_scores = [72, 45, 88, 51, 39]
 
-    legacy_average = f(mention_counts)
-    clean_average = compute_average_mentions(mention_counts)
+    class_average_score = calculate_class_average(student_scores)
 
-    print("=" * 60)
-    print("Assignment 4.20 — PEP8 Basics")
-    print("=" * 60)
-    print(f"Legacy style avg : {legacy_average:.2f}")
-    print(f"Clean  style avg : {clean_average:.2f}")
-    print(f"Identical result : {legacy_average == clean_average}")
-    print("-" * 60)
-    print("Skill classification:")
-    for skill_name, count in zip(skills, mention_counts):
-        print(f"  {classify_skill(skill_name, count)}")
-    print("=" * 60)
+    print("Assignment 4.20 - PEP 8 Basics")
+    print("-" * 45)
+    print_student_report(student_names, student_scores)
+    print("-" * 45)
+    print(f"Class average score: {class_average_score:.2f}")
 
 
 if __name__ == "__main__":
     main()
 ```
 
-### Explanation of Each Part
+### Readability Choices
 
-#### 1. The `BEFORE` function — what **not** to do
-
-```python
-def f(x):
-    a = 0
-    b = 0
-    for i in x: ...
-```
-
-Every single thing about this block is a readability failure:
-
-- `f` is a verb-less, meaning-less name. A reader cannot guess what it does without reading the body.
-- `x`, `a`, `b`, `c`, `i` are all one-letter names for values that have a concrete meaning (mention counts, running total, count, average, single count).
-- The comments `# loop`, `# add`, `# count`, `# avg` narrate **what** the code does — which the code already says. They add no information.
-- There is no docstring, no type hint, no signal that this is meant for a data-science context at all.
-
-The function still *works*. But in a review, three weeks later, or when a teammate needs to extend it, every one of these micro-failures costs time.
-
-#### 2. Module-level constant — `MIN_MENTIONS_FOR_TRENDING`
-
-```python
-MIN_MENTIONS_FOR_TRENDING = 5
-```
-
-- PEP 8 says constants go at module top in `UPPER_SNAKE_CASE`.
-- Lifting the threshold out of `classify_skill` means the **rule** ("at least 5 mentions = trending") is visible at a glance and changeable in one place.
-- Without this constant the number `5` would be a **magic number** inside the function — a reader would have to guess whether `5` is the threshold, a limit, an index, or something else.
-
-#### 3. `compute_average_mentions` — naming that replaces comments
-
-```python
-def compute_average_mentions(skill_mention_counts: list[int]) -> float:
-    """Return the mean number of times a skill is mentioned across postings."""
-    return mean(skill_mention_counts)
-```
-
-- Verb-first function name (`compute_`) matches PEP 8 and signals an action.
-- Parameter name `skill_mention_counts` is explicit about both the **unit** (counts) and the **subject** (skills).
-- Type hints (`list[int]` → `float`) act as machine-checkable documentation.
-- The one-line docstring describes **what** the function returns without re-describing every line inside. The body is one expression — extra comments would be noise.
-
-#### 4. `classify_skill` — comments that explain **why**
-
-```python
-def classify_skill(skill_name: str, mention_count: int) -> str:
-    """Classify a skill as trending or niche based on its mention count.
-
-    The threshold lives in a module-level UPPER_SNAKE_CASE constant so
-    non-obvious magic numbers never appear mid-logic.
-    """
-    if mention_count >= MIN_MENTIONS_FOR_TRENDING:
-        return f"{skill_name}: trending"
-    return f"{skill_name}: niche"
-```
-
-The docstring's second sentence is an **intent** comment — it tells the reader *why* the threshold isn't inlined. This is exactly the kind of "why" PEP 8 encourages; a reader skimming the file learns the design rule without having to diff the two versions themselves.
-
-#### 5. `main()` and the `if __name__ == "__main__"` guard
-
-```python
-def main() -> None:
-    """Entry point — keeps top-level code out of import side effects."""
-    ...
-
-if __name__ == "__main__":
-    main()
-```
-
-- Isolating executable logic inside `main()` means `import pep8_basics` from another module does **not** accidentally print banners or run demos.
-- The guard makes the script both runnable *and* importable — a common PEP 8-adjacent convention that keeps your code reusable.
-
-### PEP 8 Conventions Demonstrated
-
-| Convention | Where it appears | Why it matters |
-|---|---|---|
-| `snake_case` for variables and functions | `skill_mention_counts`, `compute_average_mentions`, `classify_skill` | Consistent casing lets a reader distinguish names from types/classes at a glance |
-| `UPPER_SNAKE_CASE` for constants | `MIN_MENTIONS_FOR_TRENDING` | Constants stand out; magic numbers are eliminated |
-| Descriptive, verb-first function names | `compute_average_mentions`, `classify_skill` | Names communicate action; reduces need for inline comments |
-| Module-level docstring | first triple-quoted string | Explains purpose, authorship, and run command without opening another file |
-| Function docstrings | each `def` | Single source of truth for what the function does and returns |
-| Type hints on signatures | `list[int] -> float`, `str, int -> str` | Makes intent machine-checkable; catches wrong-type calls early |
-| Grouped imports | `from statistics import mean` at top | PEP 8 requires imports at the top, grouped stdlib → third-party → local |
-| Four-space indentation, no tabs | throughout | PEP 8 baseline; prevents mixed-indent `TabError` in Python 3 |
-| Line length ≤ 100 chars | throughout | Keeps code readable in side-by-side diffs |
-| Two blank lines between top-level defs | throughout | PEP 8 visual separation between functions |
-| Comments explain **why**, not **what** | `# BEFORE — unreadable on purpose.`, classify_skill docstring | Comments add information the code cannot; they do not re-narrate it |
+- **Descriptive variable names:** names like `student_scores`, `class_average_score`, and `pass_fail_label` explain purpose directly.
+- **Consistent `snake_case`:** all variables and functions follow the same naming pattern for easy scanning.
+- **One policy constant:** `PASSING_SCORE_THRESHOLD` makes the grading rule explicit and easy to update in one place.
+- **Intent-focused comment:** the single inline comment explains *why* the threshold is a constant.
+- **Minimal noise:** no redundant comments such as "`add score`" or "`loop through list`".
 
 ### Sample Output
 
 ```
-============================================================
-Assignment 4.20 — PEP8 Basics
-============================================================
-Legacy style avg : 6.60
-Clean  style avg : 6.60
-Identical result : True
-------------------------------------------------------------
-Skill classification:
-  python: trending
-  sql: trending
-  excel: niche
-  tableau: trending
-  pytorch: niche
-============================================================
+Assignment 4.20 - PEP 8 Basics
+---------------------------------------------
+Aarav    | score:  72 | pass
+Diya     | score:  45 | fail
+Kabir    | score:  88 | pass
+Meera    | score:  51 | pass
+Riya     | score:  39 | fail
+---------------------------------------------
+Class average score: 59.00
 ```
-
-The `Identical result : True` line is deliberate proof: **readability changes nothing about correctness**. Both `f()` and `compute_average_mentions()` compute the same arithmetic mean. What changes is everything *around* the computation — and that is the only part a human ever reads.
 
 ### How to Run the Script
 
-1. **Clone or open the repository**
+1. **From the repository root**
    ```bash
    cd S64-0126-Team06-ADSF-Job---Shauk
    ```
-
-2. **Install dependencies (first time only)**
+2. **Run**
    ```bash
-   python3 -m pip install -r requirements.txt
-   ```
-
-3. **Run the script**
-   ```bash
-   python3 src/pep8_basics.py
-   ```
-
-4. **Format + lint (optional, verifies PEP 8 compliance)**
-   ```bash
-   python3 -m black src/pep8_basics.py
-   python3 -m ruff check src/pep8_basics.py
+   python src/pep8_basics.py
    ```
 
 ### Submission Artifacts (Milestone Requirement)
 
 #### A) Pull Request (Code Readability Proof)
 
-Submit a PR that includes `src/pep8_basics.py` and the corresponding `README.md` section for Assignment 4.20.
+Submit a PR containing `src/pep8_basics.py` and this Assignment 4.20 README section.
 
-Your PR should clearly demonstrate:
+Your PR should show:
 
-- Descriptive variable names (avoid vague names like `x`, `a`, `tmp`)
-- Consistent `snake_case` naming
-- Minimal, meaningful comments that explain intent
-- Clean, readable formatting suitable for code review
+- descriptive variable names instead of vague names,
+- consistent `snake_case`,
+- purposeful comments explaining intent,
+- clean, review-friendly formatting.
 
 #### B) Video Walkthrough (~2 minutes)
 
-Record a short screen-share video and walk through your Assignment 4.20 code.
+In the screen-recording, explain:
 
-Your walkthrough should cover:
-
-1. **Variable naming clarity**
-   - Show examples of readable names used in the script.
-   - Explain why those names are clearer than vague alternatives.
-2. **Comment quality**
-   - Show where comments/docstrings were added.
-   - Explain what they clarify and why they are useful.
-3. **Readability impact**
-   - Briefly explain how this code is easier for a teammate/reviewer to understand.
+1. variable naming choices and why they are clearer,
+2. where comments are used and what they clarify,
+3. how readability helps teammates understand and maintain code.
 
 #### Mandatory Scenario Response (include verbally in same video)
 
-If a teammate says your code works but is hard to understand, explain:
+Address this scenario:
 
-- Which naming mistakes could cause confusion
-- Which comment mistakes (redundant/misleading) could hurt readability
-- How consistent PEP 8 basics (`snake_case`, intent-focused comments, naming discipline) improve collaboration
+> A teammate finds your code difficult to understand even though it works correctly.
+
+Reference:
+
+- variable naming clarity,
+- comment intent vs redundancy,
+- consistency,
+- collaboration-focused readability.
 
 ### Submission Links
 
 - PR link: `<add-your-pr-link-here>`
 - Video link: `<add-your-video-link-here>`
-
-### Common Readability Mistakes (Avoided Here)
-
-| Mistake | Example | Why it hurts |
-|---|---|---|
-| One-letter variable names outside loop counters | `x`, `tmp`, `val` | Reader cannot infer purpose without re-reading context |
-| Comments restating the code | `a = a + i  # add` | Adds visual noise, drifts out of date, hides real intent |
-| Magic numbers mid-logic | `if count >= 5:` | Threshold rule is hidden; changing it requires grepping |
-| Top-level executable code | logic outside `main()` | Running side effects trigger on import |
-| Mixed casing | `MaxCount`, `max_count`, `MAXCOUNT` in same file | Reader has to guess convention; reviewers waste cycles |
-| Commented-out dead code | `# old_function(data)` | Version control already tracks history; dead code rots |
-
-### Conclusion
-
-PEP 8 is not about taste — it is a **team protocol**. When every contributor follows the same naming, commenting, and structure rules, the code reads like one author wrote it, and every reviewer can focus on logic instead of style. This script makes the cost of bad style visible by placing the `BEFORE` and `AFTER` side by side: identical behaviour, radically different review cost. The habit formed here — descriptive names, constants for thresholds, docstrings over inline noise, comments that explain *why* — is the foundation every later assignment in this sprint (NumPy, Pandas, visualisations) will build on.
 
 ---
 
