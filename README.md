@@ -2658,6 +2658,53 @@ The same eight skills appear in both rankings; the trending block simply reuses 
    python3 -m ruff check src/code_structure.py
    ```
 
+### Submission Artifacts (Milestone Requirement)
+
+#### A) Pull Request (Code Structure Proof)
+
+Create a PR that includes `src/code_structure.py` and the `README.md` documentation for Assignment 4.21.
+
+Your PR should clearly demonstrate:
+
+- clear separation of imports, functions, and execution logic,
+- function reuse to reduce duplication,
+- logical top-to-bottom flow,
+- clean, consistent formatting and organization.
+
+#### B) Video Walkthrough (~2 minutes)
+
+Record a short screen-share walkthrough of the same code.
+
+Your walkthrough should include:
+
+1. **Code overview**
+   - Show the overall file structure.
+   - Explain how sections are organized.
+2. **Functions and reuse**
+   - Point out reusable functions.
+   - Explain how they reduce repeated logic.
+3. **Execution flow**
+   - Explain how the script executes from top to bottom.
+   - Show where execution begins (`main()` and the entry-point guard).
+
+#### Mandatory Scenario Response (in the same video)
+
+After the walkthrough, answer:
+
+> A script works correctly but is difficult for others to understand or extend. What structural issues might cause this, and how would reorganizing the code improve readability and reuse?
+
+Reference these points in your answer:
+
+- code organization,
+- function reuse,
+- separation of concerns,
+- maintainability.
+
+### Submission Links
+
+- PR link: `<add-your-pr-link-here>`
+- Video link: `<add-your-video-link-here>`
+
 ### Common Structural Mistakes (Avoided Here)
 
 | Mistake | Consequence |
