@@ -2084,82 +2084,47 @@ The goal of this assignment is to demonstrate the PEP 8 basics of readable Pytho
 ### Full Python Script
 
 ```python
-"""Assignment 4.20 — Writing Readable Variable Names and Comments (PEP8 Basics).
+"""Assignment 4.20 - Readable names and meaningful comments.
 
-Author: Bhargav Kalambhe (Frontend & ML)
-Team:   Team 06 — Job-ही-Shauk (Sprint 3)
-
-This script contrasts an unreadable "before" style with a PEP8-compliant "after"
-style on the same tiny data-science task: summarising a list of candidate skill
-counts across job postings. The two functions produce identical output; only
-naming and comment discipline change.
-
-Run:
-    python3 src/pep8_basics.py
+This script focuses on naming and comment quality, not complex logic.
+Run: python3 src/pep8_basics.py
 """
 
-from statistics import mean
+PASSING_SCORE = 50
 
 
-# ---------------------------------------------------------------------------
-# BEFORE — unreadable on purpose. DO NOT write code like this in real work.
-# ---------------------------------------------------------------------------
-def f(x):
-    # loop
-    a = 0
-    b = 0
-    for i in x:
-        a = a + i  # add
-        b = b + 1  # count
-    c = a / b  # avg
-    return c
+def calculate_average_score(student_scores: list[int]) -> float:
+    """Return the average score for a class."""
+    return sum(student_scores) / len(student_scores)
 
 
-# ---------------------------------------------------------------------------
-# AFTER — PEP8-compliant, self-documenting.
-# ---------------------------------------------------------------------------
-MIN_MENTIONS_FOR_TRENDING = 5
+def get_result_label(score: int) -> str:
+    """Return pass/fail label using a shared threshold constant."""
+    # Keep the threshold in one place so policy updates need one edit.
+    if score >= PASSING_SCORE:
+        return "pass"
+    return "fail"
 
 
-def compute_average_mentions(skill_mention_counts: list[int]) -> float:
-    """Return the mean number of times a skill is mentioned across postings.
-
-    Using a descriptive parameter name plus a one-line docstring removes the
-    need for inline "what it does" comments — the signature already explains.
-    """
-    return mean(skill_mention_counts)
-
-
-def classify_skill(skill_name: str, mention_count: int) -> str:
-    """Classify a skill as trending or niche based on its mention count.
-
-    The threshold lives in a module-level UPPER_SNAKE_CASE constant so
-    non-obvious magic numbers never appear mid-logic.
-    """
-    if mention_count >= MIN_MENTIONS_FOR_TRENDING:
-        return f"{skill_name}: trending"
-    return f"{skill_name}: niche"
+def print_student_results(student_names: list[str], student_scores: list[int]) -> None:
+    """Print each student's score with a readable status label."""
+    for student_name, student_score in zip(student_names, student_scores):
+        result_label = get_result_label(student_score)
+        print(f"{student_name:<8} | score: {student_score:>3} | {result_label}")
 
 
 def main() -> None:
-    """Entry point — keeps top-level code out of import side effects."""
-    skills = ["python", "sql", "excel", "tableau", "pytorch"]
-    mention_counts = [12, 9, 4, 6, 2]
+    """Run a small readability-focused example."""
+    student_names = ["Aarav", "Diya", "Kabir", "Meera", "Riya"]
+    student_scores = [72, 45, 88, 51, 39]
 
-    legacy_average = f(mention_counts)
-    clean_average = compute_average_mentions(mention_counts)
+    class_average_score = calculate_average_score(student_scores)
 
-    print("=" * 60)
-    print("Assignment 4.20 — PEP8 Basics")
-    print("=" * 60)
-    print(f"Legacy style avg : {legacy_average:.2f}")
-    print(f"Clean  style avg : {clean_average:.2f}")
-    print(f"Identical result : {legacy_average == clean_average}")
-    print("-" * 60)
-    print("Skill classification:")
-    for skill_name, count in zip(skills, mention_counts):
-        print(f"  {classify_skill(skill_name, count)}")
-    print("=" * 60)
+    print("Assignment 4.20 - PEP 8 Basics")
+    print("-" * 45)
+    print_student_results(student_names, student_scores)
+    print("-" * 45)
+    print(f"Class average score: {class_average_score:.2f}")
 
 
 if __name__ == "__main__":
@@ -2372,134 +2337,81 @@ Where assignment 4.20 focused on *naming* and *comments*, this assignment focuse
 ### Full Python Script
 
 ```python
-"""Assignment 4.21 — Structuring Python Code for Readability and Reuse.
+"""Assignment 4.21 - Code structure for readability and reuse.
 
-Author: Bhargav Kalambhe (Frontend & ML)
-Team:   Team 06 — Job-ही-Shauk (Sprint 3)
-
-Where 4.20 focused on *naming* and *comments*, this script focuses on
-*structure*: how a Python file is laid out so a reader can follow it
-top-to-bottom without jumping around. The file is organised in five
-clearly labelled sections so the flow of control is obvious:
-
-    1. Imports
-    2. Constants / configuration
-    3. Pure helper functions (no side effects)
-    4. Reporting / I/O functions
-    5. Orchestration inside main() + entry-point guard
-
-Each function does exactly one thing. The top-level is clean: `main()`
-composes the pieces, and nothing else runs at import time.
-
-Run:
-    python3 src/code_structure.py
+This script demonstrates:
+1) clear sections (imports, constants, helpers, execution),
+2) reusable functions to avoid duplication,
+3) clean top-to-bottom flow with a main entry point.
 """
 
-# ---------------------------------------------------------------------------
-# 1. IMPORTS — stdlib first, third-party next, local last (PEP 8).
-# ---------------------------------------------------------------------------
-from statistics import mean, median
+# 1) Imports
+from datetime import datetime
 
 
-# ---------------------------------------------------------------------------
-# 2. CONSTANTS / CONFIGURATION — pulled out of logic so thresholds are
-#    visible, greppable, and changeable in one place.
-# ---------------------------------------------------------------------------
-TRENDING_MENTION_THRESHOLD = 5
-REPORT_WIDTH = 60
+# 2) Constants / configuration
+REPORT_LINE = "-" * 52
+TASKS = [
+    {"title": "Write README summary", "minutes": 25, "completed": True},
+    {"title": "Refactor helper function", "minutes": 30, "completed": False},
+    {"title": "Prepare demo notes", "minutes": 20, "completed": True},
+]
 
 
-# ---------------------------------------------------------------------------
-# 3. PURE HELPER FUNCTIONS — deterministic, no printing, no file I/O.
-# ---------------------------------------------------------------------------
-def load_sample_skill_data() -> list[dict]:
-    """Return a small hard-coded dataset so the demo is self-contained."""
-    return [
-        {"skill": "python", "mentions": 12},
-        {"skill": "sql", "mentions": 9},
-        {"skill": "excel", "mentions": 4},
-        {"skill": "tableau", "mentions": 6},
-        {"skill": "pytorch", "mentions": 2},
-        {"skill": "pandas", "mentions": 11},
-        {"skill": "aws", "mentions": 7},
-        {"skill": "docker", "mentions": 3},
-    ]
+# 3) Reusable helper functions (pure logic)
+def count_completed_tasks(task_items: list[dict]) -> int:
+    """Return number of completed tasks."""
+    return sum(1 for task_item in task_items if task_item["completed"])
 
 
-def filter_trending_skills(
-    skill_records: list[dict], threshold: int = TRENDING_MENTION_THRESHOLD
-) -> list[dict]:
-    """Return only the records whose mention count meets the threshold."""
-    return [record for record in skill_records if record["mentions"] >= threshold]
+def calculate_total_minutes(task_items: list[dict]) -> int:
+    """Return total estimated minutes across all tasks."""
+    return sum(task_item["minutes"] for task_item in task_items)
 
 
-def compute_mention_stats(skill_records: list[dict]) -> dict:
-    """Return summary statistics across all skill mention counts."""
-    counts = [record["mentions"] for record in skill_records]
-    return {
-        "total_skills": len(counts),
-        "total_mentions": sum(counts),
-        "average_mentions": mean(counts),
-        "median_mentions": median(counts),
-        "max_mentions": max(counts),
-        "min_mentions": min(counts),
-    }
+def calculate_completion_rate(task_items: list[dict]) -> float:
+    """Return completion rate as percentage."""
+    completed_count = count_completed_tasks(task_items)
+    return (completed_count / len(task_items)) * 100
 
 
-def rank_skills_by_mentions(skill_records: list[dict]) -> list[dict]:
-    """Return the records sorted descending by mention count."""
-    return sorted(skill_records, key=lambda record: record["mentions"], reverse=True)
+# 4) Output helpers (separated from pure logic)
+def print_header(report_title: str) -> None:
+    """Print a readable report header."""
+    print(REPORT_LINE)
+    print(report_title)
+    print(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    print(REPORT_LINE)
 
 
-# ---------------------------------------------------------------------------
-# 4. REPORTING FUNCTIONS — side-effecting (print); intentionally
-#    separated from the pure helpers above.
-# ---------------------------------------------------------------------------
-def print_section_header(title: str) -> None:
-    """Print a banner so long reports stay scannable."""
-    print("=" * REPORT_WIDTH)
-    print(title)
-    print("=" * REPORT_WIDTH)
+def print_task_list(task_items: list[dict]) -> None:
+    """Print tasks using a consistent row format."""
+    for task_item in task_items:
+        status_label = "done" if task_item["completed"] else "pending"
+        print(f"{task_item['title']:<30} | {task_item['minutes']:>2} min | {status_label}")
 
 
-def print_stats_block(stats: dict) -> None:
-    """Print a formatted summary of the statistics dictionary."""
-    print(f"  Total skills tracked : {stats['total_skills']}")
-    print(f"  Total mentions       : {stats['total_mentions']}")
-    print(f"  Average mentions     : {stats['average_mentions']:.2f}")
-    print(f"  Median  mentions     : {stats['median_mentions']}")
-    print(f"  Max / Min            : {stats['max_mentions']} / {stats['min_mentions']}")
+def print_summary(task_items: list[dict]) -> None:
+    """Print summary values computed by reusable helpers."""
+    total_task_count = len(task_items)
+    completed_task_count = count_completed_tasks(task_items)
+    total_minutes = calculate_total_minutes(task_items)
+    completion_rate = calculate_completion_rate(task_items)
+
+    print(REPORT_LINE)
+    print(f"Total tasks       : {total_task_count}")
+    print(f"Completed tasks   : {completed_task_count}")
+    print(f"Estimated minutes : {total_minutes}")
+    print(f"Completion rate   : {completion_rate:.1f}%")
+    print(REPORT_LINE)
 
 
-def print_skill_ranking(ranked_records: list[dict]) -> None:
-    """Print a ranked list of skills with mention counts."""
-    for position, record in enumerate(ranked_records, start=1):
-        print(f"  {position:>2}. {record['skill']:<10} — {record['mentions']} mentions")
-
-
-# ---------------------------------------------------------------------------
-# 5. ORCHESTRATION — main() composes the helpers in reading order.
-# ---------------------------------------------------------------------------
+# 5) Execution orchestration
 def main() -> None:
-    """Compose the helpers to produce the full mini-report."""
-    skill_records = load_sample_skill_data()
-
-    trending_records = filter_trending_skills(skill_records)
-    overall_stats = compute_mention_stats(skill_records)
-    ranked_records = rank_skills_by_mentions(skill_records)
-
-    print_section_header("Assignment 4.21 — Structured Skill Report")
-
-    print("\nOverall statistics:")
-    print_stats_block(overall_stats)
-
-    print("\nSkills ranked by mentions:")
-    print_skill_ranking(ranked_records)
-
-    print(f"\nTrending skills (>= {TRENDING_MENTION_THRESHOLD} mentions):")
-    print_skill_ranking(rank_skills_by_mentions(trending_records))
-
-    print("=" * REPORT_WIDTH)
+    """Run report flow from top to bottom."""
+    print_header("Assignment 4.21 - Structured Task Report")
+    print_task_list(TASKS)
+    print_summary(TASKS)
 
 
 if __name__ == "__main__":
