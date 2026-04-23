@@ -2299,6 +2299,47 @@ The `Identical result : True` line is deliberate proof: **readability changes no
    python3 -m ruff check src/pep8_basics.py
    ```
 
+### Submission Artifacts (Milestone Requirement)
+
+#### A) Pull Request (Code Readability Proof)
+
+Submit a PR that includes `src/pep8_basics.py` and the corresponding `README.md` section for Assignment 4.20.
+
+Your PR should clearly demonstrate:
+
+- Descriptive variable names (avoid vague names like `x`, `a`, `tmp`)
+- Consistent `snake_case` naming
+- Minimal, meaningful comments that explain intent
+- Clean, readable formatting suitable for code review
+
+#### B) Video Walkthrough (~2 minutes)
+
+Record a short screen-share video and walk through your Assignment 4.20 code.
+
+Your walkthrough should cover:
+
+1. **Variable naming clarity**
+   - Show examples of readable names used in the script.
+   - Explain why those names are clearer than vague alternatives.
+2. **Comment quality**
+   - Show where comments/docstrings were added.
+   - Explain what they clarify and why they are useful.
+3. **Readability impact**
+   - Briefly explain how this code is easier for a teammate/reviewer to understand.
+
+#### Mandatory Scenario Response (include verbally in same video)
+
+If a teammate says your code works but is hard to understand, explain:
+
+- Which naming mistakes could cause confusion
+- Which comment mistakes (redundant/misleading) could hurt readability
+- How consistent PEP 8 basics (`snake_case`, intent-focused comments, naming discipline) improve collaboration
+
+### Submission Links
+
+- PR link: `<add-your-pr-link-here>`
+- Video link: `<add-your-video-link-here>`
+
 ### Common Readability Mistakes (Avoided Here)
 
 | Mistake | Example | Why it hurts |
