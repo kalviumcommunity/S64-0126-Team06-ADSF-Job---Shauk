@@ -45,6 +45,7 @@
 - [Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns](#assignment-437--computing-basic-summary-statistics-for-individual-columns)
 - [Assignment 4.38 — Comparing Distributions Across Multiple Columns](#assignment-438--comparing-distributions-across-multiple-columns)
 - [Assignment 4.39 — Visualizing Data Distributions Using Histograms](#assignment-439--visualizing-data-distributions-using-histograms)
+- [Assignment 4.40 — Visualizing Data Distributions Using Boxplots](#assignment-440--visualizing-data-distributions-using-boxplots)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -6768,6 +6769,177 @@ Outputs are gitignored — they regenerate cleanly on every run.
 ### Conclusion
 
 Histograms are the visual companion to summary statistics: every claim 4.37 / 4.38 made about distribution shape should be falsifiable by drawing the picture. The five patterns here cover the full reporting workflow — single column, bin sensitivity, multi-column overview, per-group overlay, central-tendency annotation. With these in place, the boxplot (4.40), line plot (4.41), scatter (4.42), and outlier-detection (4.43) work that follows is mostly a matter of swapping `ax.hist(...)` for `ax.boxplot / ax.plot / ax.scatter` and keeping the rest of the figure-construction skeleton.
+
+---
+
+## Assignment 4.40 — Visualizing Data Distributions Using Boxplots
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A boxplot is a histogram's older, more compact cousin. Where a histogram shows you *how* the values fall, a boxplot shows you *where* the quartiles sit and *which* points fall outside the typical spread — a 5-summary picture (`min within whiskers`, `Q1`, `median`, `Q3`, `max within whiskers`) plus the outlier dots.
+
+The killer feature is **side-by-side group comparison**: ten sectors fit on one axis as ten boxes; the same data drawn as ten overlaid histograms is unreadable. This script demonstrates that plus the standard **`1.5×IQR` outlier rule** that boxplots embed by default.
+
+### File Name
+
+`src/visualize_boxplots.py`
+
+### Five Boxplot Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `salary_boxplot.png` | Single-column 5-summary view |
+| 2 | `multi_column_z_boxplot.png` | Five columns z-scored so they share an axis — comparable spread across different units |
+| 3 | `salary_per_sector_boxplot.png` | One box per sector, sorted by median — the killer comparison |
+| 4 | `salary_outlier_count_boxplot.png` | Per-sector boxplot annotated with `1.5×IQR` outlier counts above each box |
+| 5 | `salary_boxplot_with_jitter.png` | Boxplot + jittered scatter overlay — the density the box hides |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.40 — Visualizing Data Distributions Using Boxplots."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def count_iqr_outliers(values: pd.Series) -> int:
+    """Number of values outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR]."""
+    q1, q3 = values.quantile(0.25), values.quantile(0.75)
+    iqr = q3 - q1
+    low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    return int(((values < low) | (values > high)).sum())
+
+
+def plot_per_group_boxplot(frame, group_col, target_col, path):
+    """One box per group, sorted by median descending."""
+    grouped = frame.groupby(group_col, observed=True)[target_col].apply(
+        lambda s: s.dropna().to_numpy()
+    )
+    medians = {g: float(np.median(arr)) for g, arr in grouped.items()}
+    order = sorted(grouped.index, key=lambda g: -medians[g])
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.boxplot(
+        [grouped.loc[g] for g in order],
+        labels=order,
+        patch_artist=True,
+        boxprops={"facecolor": "lightsteelblue"},
+    )
+    ax.set_ylabel(target_col)
+    ax.set_xlabel(group_col)
+    ax.set_title(f"{target_col} per {group_col} — sorted by median (high first)")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+```
+
+### Explanation of Each Pattern
+
+#### 1. Single-column boxplot — the 5-summary view
+
+```
+median = 9.65, Q1 = 7.20, Q3 = 13.50, IQR = 6.30
+1.5*IQR outliers: 8 dots above the upper whisker.
+```
+
+A boxplot draws five horizontal lines (`min`, `Q1`, `median`, `Q3`, `max`) and bars for everything beyond `1.5×IQR` from the box. On a right-skewed `salary_lpa`, the upper whisker is short and outliers show up as dots above it — that's the visual fingerprint of skew.
+
+#### 2. Multi-column z-score boxplot — comparable spread across units
+
+```python
+z = frame[columns].apply(lambda s: (s - s.mean()) / s.std())
+ax.boxplot([z[c].dropna() for c in columns], labels=columns, ...)
+```
+
+Salary in LPA and commute in minutes can't share an axis directly. After `(x - mean) / std`, every column is on the same unit-free scale and the boxplot widths become honestly comparable. `commute_minutes`'s box towers over the others on the z-axis — the heavy-tail signature now visible at a glance.
+
+#### 3. Per-sector boxplot — comparing groups within one column
+
+```
+Per-sector salary medians (sorted high → low):
+  Technology      14.85   (n=64)
+  Finance         11.35   (n=54)
+  Healthcare       9.40   (n=49)
+  Manufacturing    8.30   (n=65)
+  Retail           7.70   (n=68)
+```
+
+This is the visualisation that makes the 4.38 per-sector table click. Five sectors, five boxes on one axis — the eye reads centre and spread together. Sorting by median descending is conventional and makes ranking obvious.
+
+#### 4. Per-sector boxplot with outlier-count annotations
+
+`ax.text(i, y_top * 1.04, f"out: {n_outliers}", ...)` writes the `1.5×IQR` count above each box:
+
+```
+Finance        -> 2 IQR outlier(s)
+Healthcare     -> 1 IQR outlier(s)
+Manufacturing  -> 0 IQR outlier(s)
+Retail         -> 3 IQR outlier(s)
+Technology     -> 2 IQR outlier(s)
+```
+
+Sectors with disproportionately many outliers either have heavy-tailed distributions or genuine data-quality issues worth investigating. Putting the count *on the chart* removes a round-trip to a separate table.
+
+#### 5. Boxplot + jittered points — what the box hides
+
+```python
+ax.boxplot(series, ...)
+jitter = rng.normal(loc=1.0, scale=0.06, size=len(series))
+ax.scatter(jitter, series, s=8, alpha=0.45)
+```
+
+The box collapses 300 rows into a 5-summary; the jitter shows the underlying density. Where points crowd, the distribution has a peak; where points thin, a gap. Use jitter when `n` is small enough that individual points are still meaningful (under a few thousand).
+
+### Histogram vs. Boxplot — Which to Use When
+
+| Question | Best chart |
+|---|---|
+| What does this distribution *look like*? (peaks, modes, gaps) | Histogram |
+| Compare 5+ groups or 5+ columns at once | Boxplot |
+| Spot outliers using a built-in rule | Boxplot |
+| Show *exact* density / sample size | Histogram + jittered scatter |
+| Quick comparable summary for a slide | Boxplot |
+
+### Boxplot Cheat Sheet
+
+```
+ax.boxplot(values)                           -> single box
+ax.boxplot([v1, v2, v3], labels=[...])       -> multi-box
+ax.boxplot(values, patch_artist=True,
+          boxprops={"facecolor": ...})       -> filled colour
+1.5*IQR rule                                 -> matplotlib's default whiskers
+count_iqr_outliers(series)                   -> numeric anomaly count
+jittered scatter on top                      -> density behind the box
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/visualize_boxplots.py
+ls outputs/figures/*box*.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Comparing raw boxplots across columns of different units | Visual spread is meaningless; z-score first |
+| Calling outliers "errors" automatically | They might be the most interesting data points; investigate before discarding |
+| Skipping per-group boxplots | Group-level differences invisible; back to overlapping histograms |
+| Forgetting `patch_artist=True` for `facecolor` | matplotlib silently ignores the colour kwarg without it |
+| Using a boxplot for a bimodal distribution | The box hides the second peak; show a histogram alongside |
+
+### Conclusion
+
+Boxplots compress a distribution into five numbers and a rule for outliers — that compression is what lets them compare ten groups on one axis where ten histograms become unreadable. With the histogram (4.39) and the boxplot (this one) in place, the toolkit covers both views every distribution analysis needs: shape detail and compact comparability.
 
 ---
 
