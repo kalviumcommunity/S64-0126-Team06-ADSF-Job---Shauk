@@ -14,6 +14,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Assignment 4.1 — Technology Orientation: What Is Data Science & How Data Projects Work](#assignment-41--technology-orientation-what-is-data-science--how-data-projects-work)
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Repository Understanding Milestone](#repository-understanding-milestone)
 - [Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts](#assignment-412--organizing-raw-data-processed-data-and-output-artifacts)
@@ -33,6 +34,7 @@
 - [Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples](#assignment-426--understanding-numpy-broadcasting-with-simple-examples)
 - [Assignment 4.27 — Creating Pandas Series from Lists and Arrays](#assignment-427--creating-pandas-series-from-lists-and-arrays)
 - [Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files](#assignment-428--creating-pandas-dataframes-from-dictionaries-and-files)
+- [Assignment 4.29 — Loading CSV Data into Pandas DataFrames](#assignment-429--loading-csv-data-into-pandas-dataframes)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -67,6 +69,90 @@ Every pipeline stage is oriented toward answering this question with statistical
 - **Demand-Supply Analysis**: Joins job postings with candidate outcomes to compute market dynamics
 - **Reproducibility**: Run manifests track git SHA, config hashes, and data hashes for bit-level reproducibility
 - **Production-Ready**: CI/CD pipeline, property-based testing, structured logging, and modular architecture
+
+---
+
+## Assignment 4.1 — Technology Orientation: What Is Data Science & How Data Projects Work
+
+### 1) What Data Science Actually Is
+
+Data science is the discipline of turning raw observations into **decisions that can be acted on with confidence**. It sits at the intersection of three older fields:
+
+- **Statistics** — for reasoning under uncertainty (is this pattern real, or noise?).
+- **Computer science** — for handling data at scale (storage, transformation, computation).
+- **Domain knowledge** — for asking the right question and interpreting results in context.
+
+A useful way to separate it from neighbouring practices:
+
+| Practice | Primary output | Time horizon |
+|---|---|---|
+| Business Intelligence (BI) | Dashboards reporting *what happened* | Past |
+| Data Analytics | Diagnostic explanations of *why it happened* | Past → Present |
+| Data Science | Predictive / inferential answers about *what will happen, or what to do* | Present → Future |
+| Machine Learning | Models that automate decisions at scale | Continuous |
+
+Data science is **not** "running queries faster" or "making prettier charts". It is the structured pursuit of an answer to a specific question, where the answer is defensible because the data, methods, and assumptions can all be inspected.
+
+### 2) How a Data Project Actually Works
+
+Real data projects do not follow a straight line. They follow a loop with five recurring stages:
+
+```
+        ┌─────────────────────────────────────────────────┐
+        ▼                                                 │
+   ┌─────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────┐
+   │ Question │ → │ Data     │ → │ Cleaning │ → │ Analysis │ → │ Communication │
+   │ Framing  │    │ Sourcing │    │ &        │    │ &        │    │ &             │
+   │          │    │          │    │ Shaping  │    │ Modelling│    │ Decision      │
+   └─────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────────┘
+        ▲                                                                  │
+        └──────────────── feedback / new questions ◄──────────────────────┘
+```
+
+Each stage answers a distinct question:
+
+1. **Question framing** — *What decision are we trying to support?* Ambiguity here invalidates everything downstream. A vague question ("study the job market") produces a vague answer; a specific one ("which 8–10 skills correlate with placement within 90 days?") gives the rest of the pipeline a target.
+2. **Data sourcing** — *What evidence would change our mind?* This determines which datasets are actually relevant, which fields matter, and where the data has to come from (internal logs, public datasets, scraped sources, surveys).
+3. **Cleaning & shaping** — *Is this evidence trustworthy and comparable?* Most project time is spent here — handling missing values, normalising spelling, reconciling different units, removing duplicates, and converting raw rows into analysis-ready tables.
+4. **Analysis & modelling** — *What does the cleaned evidence actually say?* Summary statistics, distributions, correlations, statistical tests, and (sometimes) predictive models. The goal is a result that survives sanity-checking, not a result that looks impressive.
+5. **Communication & decision** — *Can a non-technical decision-maker act on this?* A finding that cannot be explained, doubted, or applied is not yet finished work. This stage produces the visualisations, narrative summaries, and recommendations that close the loop.
+
+The loop is iterative because each stage can send you back. Cleaning often reveals that the original question was unanswerable with the available data; analysis often reveals that a new data source is needed; communication often surfaces a sharper question that restarts the cycle.
+
+### 3) Roles on a Data Project
+
+A typical data project is staffed by overlapping but distinct roles:
+
+| Role | Owns | Cares most about |
+|---|---|---|
+| Data Analyst | Cleaning, exploration, descriptive insight | *Is the data telling the truth?* |
+| Data Scientist | Statistical modelling, inference, experiments | *Is the relationship real and how strong?* |
+| ML Engineer | Predictive models, productionisation | *Does it generalise to unseen data?* |
+| Data Engineer / Backend | Pipelines, storage, reliability | *Will this run reproducibly tomorrow?* |
+| Frontend / Visualisation | Dashboards, charts, decision interfaces | *Can a human read this in 30 seconds?* |
+| Domain Expert / PM | Question framing, interpretation | *Does this answer the actual decision?* |
+
+On Team 06 these map directly: Harshita (analyst) frames the question and prepares the evidence, Harsh (backend) builds the Python scaffolding the pipeline runs on, and Bhargav (frontend & ML) handles the numerical layer and the visual surface where insights are read.
+
+### 4) How This Orientation Applies to Job-ही-Shauk
+
+The research question — *"Which skills are trending, and which skill combinations correlate most strongly with successful job placement?"* — is a textbook data-science problem rather than a BI or pure-analytics problem, because:
+
+- It requires **inference**, not just reporting (correlations, lift, confidence — not just counts).
+- It joins **two independent data surfaces** (employer-side demand, candidate-side outcomes) that must be reconciled before they can be compared.
+- The output must be **decision-ready** for an external audience (educators, learners, recruiters) who will not read the code.
+
+Mapping the project to the five-stage loop:
+
+| Stage | Where it lives in this repo | Owner |
+|---|---|---|
+| Question framing | this README + `audit.md` planning rows (4.1–4.4) | Harshita |
+| Data sourcing | `data/raw/` (immutable inputs) | Harsh / Harshita |
+| Cleaning & shaping | `notebooks/02_data_cleaning.ipynb`, `data/processed/` | Harshita |
+| Analysis & modelling | `notebooks/03_analysis.ipynb`, `src/` modules | Harshita / Bhargav |
+| Communication | `notebooks/04_visualisation.ipynb`, `outputs/figures/`, README sections | Bhargav |
+
+This orientation establishes the vocabulary used by every later assignment: **question, evidence, cleaning, analysis, communication**. Subsequent assignments (4.2 lifecycle deep-dive, 4.3 repository walk-through, 4.4 MVP definition) refine each step — but they only make sense once the overall shape of a data project is clear, which is the contribution of this assignment.
 
 ---
 
@@ -4189,6 +4275,221 @@ python3 -m ruff check src/pandas_dataframes.py
 ### Conclusion
 
 The DataFrame is where everything the sprint has built so far converges: NumPy arrays (4.22) provide the numeric substrate, `shape` / `ndim` / `dtype` (4.23) describe each column's layout, element-wise math and broadcasting (4.24–4.26) still work under the hood, vectorisation (4.25) still beats any Python loop, and Pandas Series (4.27) are the columns themselves. With the four construction patterns here — dict-of-lists, list-of-dicts, dict-of-Series, and `read_csv` — the project now has every ingredient it needs to load the real `data/raw/*.csv` files, hand them to Harshita's cleaning pipeline (4.29–4.38), and eventually surface the cleaned frames to the visualisation stage (4.39–4.43).
+
+---
+
+## Assignment 4.29 — Loading CSV Data into Pandas DataFrames
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Where 4.28 demonstrated *constructing* a DataFrame from in-memory objects, this assignment focuses on the most common real-world entry point for a data project: reading a CSV file from disk into a DataFrame. Every later cleaning, analysis, and visualisation step starts from a frame produced by `pd.read_csv`, so understanding its arguments — `parse_dates`, `dtype`, `na_values`, `usecols`, `index_col`, `sep` — is what determines whether the rest of the pipeline gets clean, typed, analysis-ready data or a frame full of strings and "NaN" surprises.
+
+### File Name
+
+`src/load_csv_data.py`
+
+### Six Loading Patterns
+
+| # | Pattern | Key arguments | What it produces |
+|---|---|---|---|
+| 1 | Plain load | _(none)_ | Pandas infers everything; date columns stay as `object` strings |
+| 2 | Date-aware | `parse_dates=[...]` | Date column becomes `datetime64[ns]`, unlocking `.dt` accessor |
+| 3 | Explicit dtype | `dtype={...}, na_values=[...]` | String columns get `string` dtype; `'-'` and `'n/a'` become `NaN` |
+| 4 | Subset + index | `usecols=[...], index_col=...` | Skips columns you don't need; promotes a column to the row index |
+| 5 | In-memory buffer | `StringIO(text), sep=';'` | Reads any character-delimited data without writing a file |
+| 6 | Safe load | `try / except FileNotFoundError` | Returns an empty frame instead of crashing |
+
+### Full Python Script
+
+```python
+"""Assignment 4.29 — Loading CSV Data into Pandas DataFrames."""
+
+from io import StringIO
+from pathlib import Path
+
+import pandas as pd
+
+SAMPLE_CSV_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "raw" / "sample_job_postings.csv"
+)
+
+SEMICOLON_CSV = """skill;mentions;notes
+python;12;
+sql;9;-
+excel;4;low-volume
+"""
+
+
+def load_plain(path: Path) -> pd.DataFrame:
+    """Baseline: let Pandas infer everything from the file."""
+    return pd.read_csv(path)
+
+
+def load_with_dates(path: Path) -> pd.DataFrame:
+    """Parse the date column into datetime64 instead of object."""
+    return pd.read_csv(path, parse_dates=["date_posted"])
+
+
+def load_with_explicit_types(path: Path) -> pd.DataFrame:
+    """Force string dtype on text columns and treat '-' as missing."""
+    return pd.read_csv(
+        path,
+        dtype={"job_title": "string", "company": "string", "sector": "string"},
+        na_values=["-", "n/a", "NA"],
+    )
+
+
+def load_subset(path: Path) -> pd.DataFrame:
+    """Read only the columns we need and use job_id as the row index."""
+    return pd.read_csv(
+        path,
+        usecols=["job_id", "job_title", "sector", "salary_lpa"],
+        index_col="job_id",
+    )
+
+
+def load_from_buffer(text: str) -> pd.DataFrame:
+    """Read a non-default-separator CSV from an in-memory string."""
+    return pd.read_csv(StringIO(text), sep=";", na_values=[""])
+
+
+def load_safely(path: Path) -> pd.DataFrame:
+    """Return an empty frame if the file is missing instead of crashing."""
+    try:
+        return pd.read_csv(path)
+    except FileNotFoundError:
+        return pd.DataFrame()
+```
+
+### Explanation of Each Pattern
+
+#### 1. Plain load — the baseline
+
+```python
+pd.read_csv("data/raw/sample_job_postings.csv")
+```
+
+The minimal call: Pandas opens the file, treats the first row as the header, parses each subsequent row, and infers a dtype per column. Numeric-looking columns become `int64` or `float64`; everything else (including dates) becomes `object` — Python strings boxed inside the column. This is the *always-works* form, but the inferred dtypes are rarely the dtypes you actually want for analysis.
+
+#### 2. Date-aware load — `parse_dates`
+
+```python
+pd.read_csv(path, parse_dates=["date_posted"])
+```
+
+Telling `read_csv` which columns are dates flips them from `object` to `datetime64[ns]` at load time. That single flag unlocks the entire `.dt` accessor (`series.dt.year`, `series.dt.month`, `series.dt.dayofweek`) and lets you sort, filter, and group by date arithmetic instead of string comparison. The `dtypes` output makes the difference visible:
+
+```
+plain['date_posted'].dtype       -> object
+with_dates['date_posted'].dtype  -> datetime64[ns]
+```
+
+#### 3. Explicit dtype + na_values — fix inference up front
+
+```python
+pd.read_csv(
+    path,
+    dtype={"job_title": "string", "company": "string", "sector": "string"},
+    na_values=["-", "n/a", "NA"],
+)
+```
+
+Two corrections happening at once:
+
+- **`dtype=`** forces specific columns to a specific Pandas dtype. Replacing the generic `object` with `string` enables vectorised string methods (`series.str.lower()`) and uses less memory.
+- **`na_values=`** treats listed sentinels as missing data. Real datasets use `'-'`, `'n/a'`, `'NA'`, `'NULL'`, `'?'` interchangeably — passing them all here means downstream code only has to check for `NaN`, not for every spelling of "missing".
+
+Doing this at load time is preferable to fixing it later: you can never recover information that was already silently coerced to a string.
+
+#### 4. Column subset + row index — `usecols` and `index_col`
+
+```python
+pd.read_csv(
+    path,
+    usecols=["job_id", "job_title", "sector", "salary_lpa"],
+    index_col="job_id",
+)
+```
+
+- **`usecols=`** parses only the listed columns — important for wide CSVs (50+ columns) where you don't want to pay the parsing cost or carry unused memory.
+- **`index_col=`** promotes one column to the row index. The frame then loses that column from the body and gains label-based access via `.loc[<job_id>]`. On the bundled sample this turns shape `(3, 7)` into shape `(3, 3)` indexed by `job_id`.
+
+#### 5. In-memory buffer — `StringIO` + custom separator
+
+```python
+csv_text = "skill;mentions;notes\npython;12;\nsql;9;-\nexcel;4;low-volume\n"
+pd.read_csv(StringIO(csv_text), sep=";", na_values=[""])
+```
+
+`read_csv` accepts any *file-like* object, not just paths. Wrapping a string in `StringIO` lets you parse CSV-shaped data that came from an API response, a clipboard paste, or a unit-test fixture without touching disk. The same call also demonstrates `sep=`, which generalises `read_csv` to TSVs (`sep="\t"`), pipe-delimited files (`sep="|"`), and the European semicolon-CSV convention shown here.
+
+#### 6. Safe load — survive a missing file
+
+```python
+def load_safely(path: Path) -> pd.DataFrame:
+    try:
+        return pd.read_csv(path)
+    except FileNotFoundError:
+        return pd.DataFrame()
+```
+
+A missing input file should not crash the pipeline at the top of `main()`. Wrapping the call in a `try/except` and returning an empty DataFrame lets the rest of the script branch on `frame.empty` and produce a clear "no data" report instead of a stack trace. This is the pattern the cleaning notebooks (4.30–4.36) will use whenever an intermediate processed file might not exist yet.
+
+### Sample Output (excerpt)
+
+```
+1) Plain load — pd.read_csv(path):
+   job_id       job_title    company      sector ... date_posted  salary_lpa
+0       1  Data Scientist  Acme Corp  Technology ...  2024-01-15        12.0
+  dtypes:  date_posted     object        # ← string, not a date
+
+2) Date-aware load — parse_dates=['date_posted']:
+  dtypes:  date_posted     datetime64[ns]  # ← now a real date
+
+4) Column subset + index — usecols=[...], index_col='job_id':
+             job_title      sector  salary_lpa
+job_id
+1       Data Scientist  Technology        12.0
+2          ML Engineer  Technology        18.0
+3         Data Analyst     Finance         7.0
+  shape : (3, 3)         # ← was (3, 7) in the plain load
+
+5) In-memory buffer with sep=';':
+    skill  mentions       notes
+0  python        12         NaN   # ← empty string became NaN
+1     sql         9           -
+2   excel         4  low-volume
+
+6) Safe load — missing file returns an empty frame, no crash:
+  (empty frame)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/load_csv_data.py
+python3 -m black src/load_csv_data.py
+python3 -m ruff check src/load_csv_data.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Skipping `parse_dates=` and parsing dates by hand later with `pd.to_datetime` | Two passes over the same data; easy to forget on one of the columns |
+| Letting `dtype` infer everything | Mixed-type columns silently become `object`, losing memory and string-method ergonomics |
+| Treating `'-'`, `'n/a'`, `''` as valid values | Downstream `dropna` / `fillna` won't catch them; correlations skewed by sentinel rows |
+| Reading the whole file when you need 4 columns | Wastes memory and parse time; `usecols=` is one line |
+| Assuming `sep=','` always | European CSVs and tool exports often use `;` — explicit `sep=` is safer |
+| Letting a missing file crash the pipeline | One `try/except FileNotFoundError` keeps batch jobs running on the rest of the inputs |
+
+### Conclusion
+
+`pd.read_csv` is the door every later assignment walks through. The plain call always works, but the *useful* call sets `parse_dates`, `dtype`, and `na_values` so that the DataFrame arrives at the cleaning stage already typed, already date-aware, and already missing-value aware. With these six patterns in place, the cleaning suite (4.30 inspection, 4.33–4.34 missing values, 4.35 duplicates, 4.36 standardisation) can focus on actual cleaning decisions instead of fighting `read_csv` defaults.
 
 ---
 
