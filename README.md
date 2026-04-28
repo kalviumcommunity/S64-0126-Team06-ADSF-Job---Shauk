@@ -46,6 +46,7 @@
 - [Assignment 4.38 — Comparing Distributions Across Multiple Columns](#assignment-438--comparing-distributions-across-multiple-columns)
 - [Assignment 4.39 — Visualizing Data Distributions Using Histograms](#assignment-439--visualizing-data-distributions-using-histograms)
 - [Assignment 4.40 — Visualizing Data Distributions Using Boxplots](#assignment-440--visualizing-data-distributions-using-boxplots)
+- [Assignment 4.41 — Identifying Trends Over Time Using Line Plots](#assignment-441--identifying-trends-over-time-using-line-plots)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -6940,6 +6941,202 @@ ls outputs/figures/*box*.png
 ### Conclusion
 
 Boxplots compress a distribution into five numbers and a rule for outliers — that compression is what lets them compare ten groups on one axis where ten histograms become unreadable. With the histogram (4.39) and the boxplot (this one) in place, the toolkit covers both views every distribution analysis needs: shape detail and compact comparability.
+
+---
+
+## Assignment 4.41 — Identifying Trends Over Time Using Line Plots
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A line plot is the canonical chart for *ordered* data: x is time, y is the metric, the line connects consecutive points. The shape of the line is the **trend**; unusual peaks or dips are the **anomalies** that summary statistics by themselves would never have surfaced.
+
+### File Name
+
+`src/visualize_line_plots.py`
+
+### A Synthetic Stream with a Trend, a Cycle, and an Anomaly
+
+The script generates a 180-day synthetic posting stream where:
+
+- **Baseline volume** ramps slowly from ~8 → ~16 postings/day (visible **upward trend**).
+- **Weekend effect** scales the baseline by `0.55` (visible **weekly cycle**).
+- **Days 60–67** is an injected anomaly window where volume drops to `0.25 × baseline` (visible **anomaly**).
+
+All three are deliberate so the four line-plot patterns each get to demonstrate something.
+
+### Four Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `postings_daily_line.png` | Raw daily count + **7-day rolling mean** overlay — the canonical noise-vs-trend separation |
+| 2 | `postings_weekly_line.png` | `resample("W-MON")` aggregate — same data, smoother story |
+| 3 | `postings_per_sector_line.png` | Multi-line per sector with light rolling smoothing |
+| 4 | `postings_anomaly_line.png` | Daily count + ±2σ band; days >2 std from local mean highlighted in **red** |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.41 — Identifying Trends Over Time Using Line Plots."""
+
+from __future__ import annotations
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def daily_counts(frame: pd.DataFrame) -> pd.Series:
+    """Postings per calendar day, sorted by date."""
+    return (
+        frame.groupby(frame["date_posted"].dt.date)
+        .size()
+        .rename("postings")
+        .sort_index()
+    )
+
+
+def weekly_counts(frame: pd.DataFrame) -> pd.Series:
+    """Postings per ISO calendar week (Mon-anchored)."""
+    return frame.set_index("date_posted").resample("W-MON").size().rename("postings")
+
+
+def plot_daily_with_rolling(daily: pd.Series, path):
+    rolling = daily.rolling(window=7, min_periods=1).mean()
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(daily.index, daily.values, color="steelblue", linewidth=1.0,
+            label="Daily count (raw)")
+    ax.plot(rolling.index, rolling.values, color="crimson", linewidth=2.0,
+            label="7-day rolling mean")
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.legend()
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+
+
+def plot_anomalies(daily: pd.Series, path):
+    """Centred 14-day rolling mean ± 2 std; flag days outside the band."""
+    rolling_mean = daily.rolling(window=14, min_periods=3, center=True).mean()
+    rolling_std = daily.rolling(window=14, min_periods=3, center=True).std()
+    deviation = (daily - rolling_mean).abs() / rolling_std.replace(0, np.nan)
+    anomalies = daily[deviation > 2]
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(daily.index, daily.values, color="steelblue", linewidth=1.0)
+    ax.plot(rolling_mean.index, rolling_mean.values, color="grey",
+            linewidth=1.5, linestyle="--", label="14-day centred mean")
+    ax.fill_between(rolling_mean.index,
+                    rolling_mean - 2 * rolling_std,
+                    rolling_mean + 2 * rolling_std,
+                    color="grey", alpha=0.15, label="±2 std band")
+    ax.scatter(anomalies.index, anomalies.values, color="crimson",
+               s=40, zorder=5,
+               label=f"Anomaly (>2 std): {len(anomalies)} day(s)")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+```
+
+### Explanation of Each Pattern
+
+#### 1. Daily count + 7-day rolling mean
+
+Raw daily volume is jittery from weekend dips and Poisson noise. The 7-day rolling mean strips out the weekly cycle and exposes the slow upward trend across the 6-month window — a classic **noise-vs-trend** separation.
+
+```
+Daily mean: 10.1 postings/day, std: 3.7
+```
+
+#### 2. Weekly aggregate
+
+`resample("W-MON")` collapses the daily series into weekly buckets. The weekend effect disappears entirely (it's now folded into each weekly sum) and the trend becomes the dominant signal.
+
+```
+Weekly mean: 68 postings/week, min: 9, max: 106
+```
+
+The dramatic min (9 postings) corresponds to the seeded anomaly week — visible at this granularity as a single dropped point on the line.
+
+#### 3. Per-sector multi-line
+
+```python
+for sector in per_sector.columns:
+    smooth = per_sector[sector].rolling(window=7, min_periods=1).mean()
+    ax.plot(smooth.index, smooth.values, label=sector)
+```
+
+Five sectors, five lines on one axis with light rolling smoothing so the lines are readable. Per-sector totals over the window:
+
+```
+Finance         375
+Manufacturing   374
+Technology      373
+Healthcare      367
+Retail          359
+```
+
+Roughly even allocation by construction, so the comparison is about *temporal pattern*, not total volume.
+
+#### 4. Anomaly highlight via ±2σ band
+
+```python
+rolling_mean = daily.rolling(window=14, center=True).mean()
+rolling_std = daily.rolling(window=14, center=True).std()
+deviation = (daily - rolling_mean).abs() / rolling_std
+anomalies = daily[deviation > 2]
+```
+
+A centred rolling mean with a `±2σ` band makes the "normal" range visible. Days where the count falls outside the band are flagged in red. The script's seeded anomaly window (days 60–67) drops to ~25% of baseline — depending on where the centred window straddles the dip, 2-3 days end up flagged.
+
+### Time-Axis Formatting
+
+```python
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+fig.autofmt_xdate()
+```
+
+This trio is what makes a date axis readable instead of overlapping unreadable labels. Always pair `MonthLocator` (or `WeekdayLocator`, `YearLocator`) with a matching `DateFormatter`, and call `fig.autofmt_xdate()` to rotate.
+
+### Line-Plot Cheat Sheet
+
+```
+ax.plot(x, y)                                -> basic line
+series.rolling(window=7).mean()              -> 7-day noise reduction
+series.resample("W-MON").sum()               -> change time granularity
+ax.fill_between(x, low, high, alpha=0.2)     -> tolerance band
+mdates.MonthLocator() + DateFormatter("%b %Y") -> readable date axis
+fig.autofmt_xdate()                          -> rotate ticks
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/visualize_line_plots.py
+ls outputs/figures/postings_*line.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Plotting a line on unsorted data | Zigzag mess; the "trend" is just sort order |
+| Using daily granularity when the question is "monthly trend" | Cycle noise dominates; resample first |
+| Overlaying 20 lines | Visual chaos; use a small-multiples grid or pick the top 5 |
+| No date locator/formatter | Tick labels overlap and become unreadable |
+| Anomaly detection without a *centred* rolling window | Anomalies near the edges are missed (window goes off-end) |
+| Demoing on data without a real trend or anomaly | The line plot is flat noise; nothing to discuss |
+
+### Conclusion
+
+Histograms (4.39) and boxplots (4.40) describe a static distribution; line plots describe how that distribution evolves. Three views — daily, weekly, per-sector — combined with a `±2σ` anomaly band cover the full set of trend-spotting questions a 180-day stream can answer. With these in place the visualisation toolkit is ready for the relationship view (scatter, 4.42) and the unified outlier story (4.43).
 
 ---
 
