@@ -36,6 +36,7 @@
 - [Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files](#assignment-428--creating-pandas-dataframes-from-dictionaries-and-files)
 - [Assignment 4.29 — Loading CSV Data into Pandas DataFrames](#assignment-429--loading-csv-data-into-pandas-dataframes)
 - [Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()](#assignment-430--inspecting-dataframes-using-head-info-and-describe)
+- [Assignment 4.31 — Understanding Data Shapes and Column Data Types](#assignment-431--understanding-data-shapes-and-column-data-types)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -4753,6 +4754,283 @@ python3 -m ruff check src/inspect_dataframe.py
 ### Conclusion
 
 `head()`, `info()`, and `describe()` are the three-question routine every fresh DataFrame should pass through *before* any cleaning, transformation, or analysis. The synthetic-data demonstration is what proves the routine actually works on data that resembles the real world: NaN where reality has NaN, a skewed numeric column where reality has skew, mixed numeric and categorical types where reality is mixed. The cleaning suite that follows (4.31 shape & types, 4.33–4.34 missing values, 4.35 duplicates, 4.36 standardisation) all depend on the answers these three methods reveal — running them up-front makes the rest of the pipeline cheaper, safer, and far easier to debug.
+
+---
+
+## Assignment 4.31 — Understanding Data Shapes and Column Data Types
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+After loading a CSV (4.29) and running the inspection routine (4.30), the next questions every fresh DataFrame needs to answer are: *what is the actual shape of this thing, and are the column types what I expected?* These two questions decide whether your next operation will work or silently corrupt the analysis. The two failure modes this assignment is designed to expose:
+
+1. **Wrong assumptions about size** — off-by-one rows, dropped header, accidentally-wide-or-narrow frame.
+2. **Wrong assumptions about types** — numeric-looking columns that are actually strings, where arithmetic *concatenates* instead of adding (a silent disaster).
+
+### File Name
+
+`src/dataframe_shape_types.py`
+
+### Why a Tidy Frame Alone Isn't Enough
+
+The bundled `sample_job_postings.csv` is already tidy — every column dtype is what it should be, so it doesn't *demonstrate* a type problem. To make the lesson real, the script defines a deliberately-broken `MESSY_POSTINGS_CSV` constant containing the kind of input you actually receive from a hand-edited spreadsheet:
+
+| Column | Broken because | Stored as |
+|---|---|---|
+| `salary_lpa` | Currency prefix `$`, missingness as `-` / `n/a` | `object` (strings) |
+| `is_remote` | Mixed-case `Yes` / `no` / `YES` / `NO` | `object` |
+| `date_posted` | No `parse_dates=` argument | `object` |
+| `experience_years` | Stray `"unknown"` mixed with integers | `object` |
+
+Loaded without any type coercion, this is what `dtypes` reveals — and that revelation is the whole point of the assignment.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.31 — Understanding Data Shapes and Column Data Types."""
+
+import io
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+# Deliberately-broken CSV captured as a string for the type-issue demo.
+MESSY_POSTINGS_CSV = """job_id,job_title,sector,salary_lpa,is_remote,date_posted,experience_years
+1,Data Scientist,Technology,"$12.5",Yes,2024-01-15,3
+2,ML Engineer,Technology,"$18.0",no,2024-02-10,5
+3,Data Analyst,Finance,"-",YES,2024-01-20,2
+4,Backend Engineer,Finance,"$15.0",No,2024-03-05,unknown
+...
+"""
+
+
+def shape_report(frame: pd.DataFrame) -> str:
+    """Multi-line shape report covering shape / ndim / size / len."""
+    rows, cols = frame.shape
+    return (
+        f"  frame.shape -> {frame.shape}   ({rows} rows x {cols} columns)\n"
+        f"  frame.ndim  -> {frame.ndim}   (a DataFrame is always 2-D)\n"
+        f"  frame.size  -> {frame.size}   (rows * columns = total cell count)\n"
+        f"  len(frame)  -> {len(frame)}   (row count, same as frame.shape[0])"
+    )
+
+
+def detect_type_issues(frame: pd.DataFrame) -> list[str]:
+    """Heuristic: flag object-dtype columns whose values mostly parse as numeric."""
+    warnings = []
+    for column in frame.columns:
+        series = frame[column]
+        if pd.api.types.is_object_dtype(series.dtype):
+            sample = series.dropna().astype(str).head(20)
+            numeric_ok = pd.to_numeric(
+                sample.str.replace("$", "", regex=False).replace(
+                    {"-": np.nan, "n/a": np.nan}
+                ),
+                errors="coerce",
+            ).notna()
+            if numeric_ok.mean() > 0.6:
+                warnings.append(
+                    f"  '{column}' is dtype=object but {numeric_ok.mean():.0%} "
+                    f"of sampled values parse as numeric -> use pd.to_numeric()."
+                )
+    return warnings
+
+
+def repair_messy_postings(messy: pd.DataFrame) -> pd.DataFrame:
+    """Apply the canonical type-repair recipe to the messy frame."""
+    fixed = messy.copy()
+    fixed["salary_lpa"] = (
+        fixed["salary_lpa"]
+        .astype("string")
+        .str.replace("$", "", regex=False)
+        .replace({"-": pd.NA, "n/a": pd.NA, "NA": pd.NA})
+    )
+    fixed["salary_lpa"] = pd.to_numeric(fixed["salary_lpa"], errors="coerce")
+
+    truthy = {"yes", "y", "true", "1"}
+    fixed["is_remote"] = (
+        fixed["is_remote"]
+        .astype("string").str.strip().str.lower()
+        .map(lambda v: True if v in truthy else False if v else pd.NA)
+        .astype("boolean")
+    )
+
+    fixed["date_posted"] = pd.to_datetime(fixed["date_posted"], errors="coerce")
+    fixed["experience_years"] = (
+        pd.to_numeric(fixed["experience_years"], errors="coerce").astype("Int64")
+    )
+    return fixed
+```
+
+### Explanation of Each Part
+
+#### 1. Shape attributes — how big is the frame?
+
+```python
+frame.shape   # (rows, columns) tuple
+frame.ndim    # 2 for any DataFrame
+frame.size    # rows * columns (total cell count)
+len(frame)    # row count, same as frame.shape[0]
+```
+
+`shape` is the answer to *"how big is this?"* in two integers — the number of observations and the number of attributes. `ndim` is always `2` for a DataFrame (it's `1` for a Series, `0` for a scalar) — useful in functions that handle both. `size` is `rows × columns` and is what a memory-budget calculation starts from.
+
+#### 2. Rows = observations, Columns = attributes
+
+The "tidy data" convention: each row is one observation (here, one job posting), and each column is one attribute of that observation (`job_title`, `sector`, `salary_lpa`, …). When the shape is `(120, 6)` you are looking at 120 postings × 6 attributes.
+
+This convention is what makes Pandas operations read naturally:
+
+```python
+postings[postings["sector"] == "Finance"]                    # filter rows
+postings.groupby("sector").agg({"salary_lpa": "mean"})       # aggregate columns
+```
+
+If your frame has rows-as-attributes and columns-as-observations (a "wide" frame), the same operations no longer make sense — `melt()` / `pivot()` are how you flip between layouts.
+
+#### 3. Column dtypes — what type did Pandas infer?
+
+```python
+frame.dtypes
+```
+
+The dtype vector is the *truth* of what Pandas thinks each column contains. The dtypes you'll meet most often:
+
+| Dtype | What it holds | NaN support |
+|---|---|---|
+| `int64` | integers | no (use `Int64` for nullable) |
+| `float64` | real numbers, also home of `NaN` | yes (built in) |
+| `bool` | True / False | no (use `boolean` for nullable) |
+| `object` | Python strings — or anything heterogeneous | yes |
+| `datetime64[ns]` | timestamps; gives you the `.dt` accessor | yes (`NaT`) |
+| `category` | low-cardinality strings, memory-efficient | yes |
+
+The danger is `object`: it's the dtype Pandas falls back to when it can't figure out anything better, so it's also where mistakes hide.
+
+#### 4. Type-issue detection — which columns are lying?
+
+The script's `detect_type_issues()` walks the frame and applies one heuristic: *if a column's dtype is `object` but more than 60% of its non-null values parse as numeric, the column is really numeric*. On the messy frame this fires on:
+
+```
+'salary_lpa' is dtype=object but 83% of sampled values parse as numeric
+              -> use pd.to_numeric().
+'experience_years' is dtype=object but 86% of sampled values parse as numeric
+              -> use pd.to_numeric().
+```
+
+What goes wrong if you don't fix these:
+
+```python
+messy["salary_lpa"].sum()   # -> '$12.5$18.0-$15.0n/a$20.0$22.5'
+                            # string concatenation, not arithmetic.
+```
+
+That output is the textbook silent-disaster: no error, no warning, just nonsense in your aggregates.
+
+#### 5. The repair recipe — `to_numeric` / `to_datetime` / `astype`
+
+Once the issues are detected, the fix is a small set of canonical Pandas calls:
+
+```python
+# salary: strip "$", treat sentinels as NaN, then coerce to float.
+fixed["salary_lpa"] = (
+    messy["salary_lpa"]
+    .astype("string")
+    .str.replace("$", "", regex=False)
+    .replace({"-": pd.NA, "n/a": pd.NA})
+)
+fixed["salary_lpa"] = pd.to_numeric(fixed["salary_lpa"], errors="coerce")
+
+# date: explicit parse to datetime64[ns].
+fixed["date_posted"] = pd.to_datetime(messy["date_posted"], errors="coerce")
+
+# experience_years: coerce mixed string/int to nullable Int64.
+fixed["experience_years"] = pd.to_numeric(
+    messy["experience_years"], errors="coerce"
+).astype("Int64")
+
+# is_remote: yes/no/YES/no -> nullable boolean.
+fixed["is_remote"] = (
+    messy["is_remote"].astype("string").str.lower()
+    .map({"yes": True, "no": False}).astype("boolean")
+)
+```
+
+`errors="coerce"` is the workhorse: anything that can't be parsed becomes `NaN` instead of raising, so the cleaning step is deterministic. The nullable types (`Int64`, `boolean`, `string`) are the modern Pandas dtypes that *carry* `NaN` properly — unlike `int64` and `bool` which can't.
+
+### Sample Output (excerpt)
+
+```
+1) Shape attributes — how big is the frame?
+Tidy bundled CSV:
+  frame.shape -> (3, 7)   (3 rows x 7 columns)
+  frame.ndim  -> 2        (a DataFrame is always 2-D)
+  frame.size  -> 21       (rows * columns = total cell count)
+
+3) Column dtypes — Messy frame:
+          column  dtype                                                            hint
+          job_id  int64
+       job_title object
+          sector object
+      salary_lpa object  <-- numeric-sounding column stored as object (probably strings)
+       is_remote object  <-- yes/no flag stored as object (consider bool / category)
+     date_posted object  <-- date-sounding column not parsed (use pd.to_datetime)
+experience_years object  <-- numeric-sounding column stored as object (probably strings)
+
+5) Repair recipe — same column, before and after — salary_lpa:
+  before (object/strings)  after  (float64, NaN where bad)
+0                   $12.5                             12.5
+1                   $18.0                             18.0
+2                       -                             <NA>
+3                   $15.0                             15.0
+4                     n/a                             <NA>
+5                   $20.0                             20.0
+6                   $22.5                             22.5
+
+   fixed['salary_lpa'].sum()  -> 88.00    (real arithmetic, NaN ignored)
+   fixed['salary_lpa'].mean() -> 17.60
+```
+
+### Cheat Sheet — Shape and Types
+
+```
+frame.shape         -> (rows, columns) tuple
+frame.ndim          -> 2 for any DataFrame
+frame.size          -> rows * columns
+frame.dtypes        -> per-column type vector
+pd.to_numeric(s, errors="coerce")  -> strings -> numbers, bad -> NaN
+pd.to_datetime(s, errors="coerce") -> strings -> timestamps, bad -> NaT
+.astype("Int64")    -> nullable integer (keeps NaN, unlike int64)
+.astype("boolean")  -> nullable boolean (keeps NaN, unlike bool)
+.astype("category") -> compact dtype for low-cardinality strings
+.astype("string")   -> proper string dtype (over generic object)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/dataframe_shape_types.py
+python3 -m black src/dataframe_shape_types.py
+python3 -m ruff check src/dataframe_shape_types.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Trusting that `dtype=object` columns are strings only | Mixed numeric-and-string columns silently break aggregations |
+| Calling `.sum()` on a salary column without checking dtype | String concatenation (`'$12.5$18.0...'`) instead of arithmetic |
+| Using `int64` when missing values exist | `int64` cannot hold NaN; the column is silently coerced to `float64` |
+| Comparing dtypes with `dtype == object` | Style-incorrect; prefer `pd.api.types.is_object_dtype(dtype)` |
+| Skipping `errors="coerce"` on `to_numeric` | One bad cell raises `ValueError` and the whole column fails |
+| Demoing only on a tidy CSV | The lesson never *encounters* a type problem and reads as theoretical |
+
+### Conclusion
+
+Shape and types are the blueprint of the dataset — every later cleaning, joining, modelling, or visualisation operation depends on getting them right. Running `frame.shape` and `frame.dtypes` immediately after `frame.head()` (4.30) takes ten seconds and prevents the most common class of silent analysis bugs. The tidy-vs-messy contrast in this assignment makes both the diagnostic step and the repair recipe concrete: you can see the lie in the dtype vector and you can see the arithmetic light up after the repair.
 
 ---
 
