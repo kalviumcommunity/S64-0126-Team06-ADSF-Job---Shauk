@@ -42,6 +42,7 @@
 - [Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies](#assignment-434--handling-missing-values-using-drop-and-fill-strategies)
 - [Assignment 4.35 — Identifying and Removing Duplicate Records](#assignment-435--identifying-and-removing-duplicate-records)
 - [Assignment 4.36 — Standardizing Column Names and Data Formats](#assignment-436--standardizing-column-names-and-data-formats)
+- [Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns](#assignment-437--computing-basic-summary-statistics-for-individual-columns)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -6120,6 +6121,215 @@ python3 -m ruff check src/standardize_data.py
 ### Conclusion
 
 Standardisation is the cleaning step that lets every later operation assume *equal-looking values are equal*. Without it, `groupby("sector")` invents groups, joins miss rows, and aggregates double-count. The four-target recipe — columns, text, numerics, dates — covers virtually every real-world inconsistency you'll meet at the disk-to-frame boundary, and the alias map is what closes the long tail of "same thing, different word" cases that purely-lexical rules can't.
+
+---
+
+## Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Summary statistics are the first quantitative read of a numeric column. Five small numbers — `count`, `mean`, `std`, `min`, `max` — plus the quartiles tell you most of what you need to know about how a column behaves *before* you reach for a chart or a model.
+
+The trick is that the *same set of statistics says different things depending on the column's distribution shape*. A right-skewed column has `mean > median`. A heavy-tailed column has `std` much larger than `IQR`. A uniform column has `mean ≈ median`. The lesson is incomplete if you only run `describe()` once on one column.
+
+### File Name
+
+`src/column_stats.py`
+
+### Why Five Distributions in One Frame
+
+A single column can only tell one story. The script generates a 150-row synthetic frame with **five numeric columns each shaped on purpose** so all the statistics get to demonstrate something:
+
+| Column | Distribution | Expected statistical fingerprint |
+|---|---|---|
+| `salary_lpa` | Lognormal (μ=2.4, σ=0.5) | Right-skewed; `mean > median`; std inflated by tail |
+| `experience_years` | Uniform integer [0, 12) | Symmetric; `mean ≈ median`; std/IQR near 0.74 |
+| `applications_received` | Poisson (λ=8) | Mildly right-skewed counts; floor at 0 |
+| `interview_score` | Normal (μ=8.0, σ=1.2), clipped to [1, 10] | Symmetric, bounded; low spread |
+| `commute_minutes` | Exponential (scale=35) | Heavy right tail; `std >> IQR` |
+
+A single demo frame, five different stories — exactly what a student needs to see *what each statistic means in practice*.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def column_quartiles(series: pd.Series) -> tuple[float, float, float]:
+    """25th / 50th / 75th percentiles. Q2 (50%) is the median."""
+    q1 = float(series.quantile(0.25))
+    q2 = float(series.quantile(0.50))
+    q3 = float(series.quantile(0.75))
+    return q1, q2, q3
+
+
+def column_iqr(series: pd.Series) -> float:
+    """Inter-quartile range = Q3 - Q1. Robust spread (not pulled by outliers)."""
+    q1, _, q3 = column_quartiles(series)
+    return q3 - q1
+
+
+def column_skewness_hint(series: pd.Series) -> str:
+    """Mean-vs-median gap as a one-word direction."""
+    mean, median = float(series.mean()), float(series.median())
+    if mean - median > 0.05 * abs(median + 1e-9):
+        return "right-skewed"
+    if median - mean > 0.05 * abs(median + 1e-9):
+        return "left-skewed"
+    return "roughly symmetric"
+
+
+def per_column_summary(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """One row per column: count, min, max, mean, median, std, iqr, shape."""
+    rows = []
+    for column in columns:
+        series = frame[column]
+        q1, q2, q3 = column_quartiles(series)
+        rows.append({
+            "column": column,
+            "count": int(series.count()),
+            "min": float(series.min()),
+            "max": float(series.max()),
+            "mean": round(float(series.mean()), 2),
+            "median": round(q2, 2),
+            "std": round(float(series.std()), 2),
+            "iqr": round(q3 - q1, 2),
+            "shape": column_skewness_hint(series),
+        })
+    return pd.DataFrame(rows).set_index("column")
+```
+
+### Explanation of Each Statistic
+
+#### Single-column deep dive — `salary_lpa`
+
+```
+count                         150.00
+min                             3.30 LPA
+max                            44.10 LPA
+range  (max - min)             40.80 LPA
+mean                           12.79 LPA
+median (Q2)                    12.00 LPA
+Q1 (25%)                        8.30 LPA
+Q3 (75%)                       15.98 LPA
+IQR (Q3 - Q1)                   7.68 LPA
+std                             7.51 LPA
+variance                       56.40 LPA²
+```
+
+Two reads:
+
+- **`mean (12.79) > median (12.00)`** — `+0.79` gap, so `right-skewed`. A few high earners pull the mean up while the median (the typical row) stays lower.
+- **`std (7.51) ≈ IQR (7.68)`** — std/IQR ratio of `0.98` is well above the symmetric-distribution fingerprint of `0.74`. That's the standard sign of a long right tail inflating the std.
+
+#### Cross-column comparison
+
+```
+                       count    min    max   mean  median    std   iqr            shape
+column
+salary_lpa             150    3.3    44.1  12.79  12.00   7.51   7.68   right-skewed
+experience_years       150    0.0    11.0   5.47   6.00   3.22   5.00   left-skewed
+applications_received  150    2.0    16.0   7.93   8.00   2.82   4.00   roughly symmetric
+interview_score        150    4.4    10.0   7.82   7.95   1.15   1.38   roughly symmetric
+commute_minutes        150    0.0   207.0  39.86  32.00  36.29  51.75   right-skewed
+```
+
+#### Mean-vs-median gap as a skewness scanner
+
+```
+                        mean  median              shape    gap
+column
+salary_lpa             12.79   12.00       right-skewed   0.79
+experience_years        5.47    6.00        left-skewed  -0.53
+applications_received   7.93    8.00  roughly symmetric  -0.07
+interview_score         7.82    7.95  roughly symmetric  -0.13
+commute_minutes        39.86   32.00       right-skewed   7.86
+```
+
+A single `gap = mean - median` column scans every numeric variable for skew at a glance. `commute_minutes` jumps out with a `+7.86` gap — the heavy right tail is pulling the mean far above the typical commute.
+
+#### `std` vs `IQR` — robust-vs-tail-sensitive spread
+
+| Column | std | IQR | std/IQR ratio | Read |
+|---|---:|---:|---:|---|
+| salary_lpa | 7.51 | 7.68 | 0.98 | std inflated by long tail; trust IQR |
+| experience_years | 3.22 | 5.00 | 0.64 | symmetric; std and IQR agree |
+| applications_received | 2.82 | 4.00 | 0.70 | symmetric-ish (Poisson) |
+| interview_score | 1.15 | 1.38 | 0.83 | mostly symmetric, slight tail |
+| commute_minutes | 36.29 | 51.75 | 0.70 | heavy right tail |
+
+A normal distribution has `std ≈ 0.74 × IQR`. Ratios well above `0.74` indicate the std is being inflated by outliers and the IQR is the more honest spread; ratios below mean the column is more concentrated than normal-shaped.
+
+#### Ranking columns by IQR
+
+```
+                       mean    iqr              shape
+column
+commute_minutes       39.86   51.75   right-skewed       <- most volatile
+salary_lpa            12.79    7.68   right-skewed
+experience_years       5.47    5.00   left-skewed
+applications_received  7.93    4.00   roughly symmetric
+interview_score        7.82    1.38   roughly symmetric  <- most concentrated
+```
+
+IQR ranking answers *"how spread out is the typical row?"* — more honest than ranking by std when distributions are skewed.
+
+### Statistics Cheat Sheet
+
+```
+COUNT / RANGE
+  series.count()                -> non-null count
+  series.min(), series.max()    -> range endpoints
+  series.max() - series.min()   -> range
+CENTRAL TENDENCY
+  series.mean()                 -> arithmetic average (outlier-sensitive)
+  series.median()               -> middle value (outlier-robust)
+SPREAD
+  series.std()                  -> standard deviation (outlier-sensitive)
+  series.var()                  -> variance (in squared units)
+  series.quantile([.25,.5,.75]) -> quartiles
+  Q3 - Q1                       -> IQR (outlier-robust)
+DISTRIBUTION SHAPE READ
+  mean - median                 -> sign tells skew direction
+  std / iqr                     -> ~0.74 = symmetric, >0.74 = heavy-tailed
+ALL AT ONCE
+  series.describe()             -> count + mean + std + min + 25/50/75 + max
+WHEN TO PREFER WHICH
+  symmetric distribution        -> mean + std are fine
+  skewed / heavy-tailed         -> median + IQR are more honest
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/column_stats.py
+python3 -m black src/column_stats.py
+python3 -m ruff check src/column_stats.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Reporting only `mean` on a skewed column | Misleads the reader about the typical value; median is more representative |
+| Using `std` to rank columns by spread | Heavy-tailed columns look more variable than they actually are at the typical-row level |
+| Treating `min` / `max` as descriptive without sanity-checking | Negative ages, `salary_lpa = 0` are usually data-quality bugs, not features |
+| Forgetting that `interview_score` was clipped | min/max appear bounded only because of a hard clip — easy to over-interpret |
+| Demoing on one column | Every distribution behaves differently; the lesson needs contrast across columns |
+| Skipping the median entirely | The mean alone doesn't reveal skew; you need both numbers to read shape |
+
+### Conclusion
+
+`mean` and `median` are not interchangeable; `std` and `IQR` are not interchangeable. Picking the right one depends on what the column's distribution actually looks like — and the cheapest way to find that out is to look at both pairs side by side. The five-distribution demo here turns that habit into reflex: a quick scan of `(mean, median, gap, std, iqr, ratio)` per column tells you which features are well-behaved (symmetric, low spread) and which need careful handling later (heavy-tailed, skewed) before any aggregation or modelling step.
 
 ---
 
