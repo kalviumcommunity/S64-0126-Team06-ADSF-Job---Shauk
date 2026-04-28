@@ -44,6 +44,7 @@
 - [Assignment 4.36 — Standardizing Column Names and Data Formats](#assignment-436--standardizing-column-names-and-data-formats)
 - [Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns](#assignment-437--computing-basic-summary-statistics-for-individual-columns)
 - [Assignment 4.38 — Comparing Distributions Across Multiple Columns](#assignment-438--comparing-distributions-across-multiple-columns)
+- [Assignment 4.39 — Visualizing Data Distributions Using Histograms](#assignment-439--visualizing-data-distributions-using-histograms)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -6549,6 +6550,224 @@ python3 -m ruff check src/compare_distributions.py
 ### Conclusion
 
 Comparison is the step that turns "we computed some statistics" into "we found a story." Two questions matter — *across columns* (handled with CV / z-score) and *across groups within a column* (handled with `groupby` + per-group summary + MAD-based anomaly flag). Both report **centre and spread together**, and both prefer robust metrics (median, IQR, P95−P5, MAD) when the underlying distribution is skewed or heavy-tailed. Once these comparisons are routine, the visualisation work that follows (4.39 histograms, 4.40 boxplots, 4.42 scatter, 4.43 outlier detection) is mostly *picturing* what the numbers already said.
+
+---
+
+## Assignment 4.39 — Visualizing Data Distributions Using Histograms
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A histogram is the cheapest way to look at a distribution — bin the values, count what falls into each bin, draw a bar per bin. The shape of the resulting bars tells you what no summary statistic can: peaks, modes, gaps, asymmetry, the long tail you suspected existed. This assignment is the visual companion to 4.37 (per-column statistics) and 4.38 (cross-column comparison) — every claim those scripts made about distribution shape gets a picture here.
+
+### File Name
+
+`src/visualize_histograms.py`
+
+### Five Histogram Patterns Saved to `outputs/figures/`
+
+| # | File | What it shows |
+|---|---|---|
+| 1 | `salary_distribution_hist.png` | Single column, default `bins="auto"` — baseline |
+| 2 | `salary_bin_comparison_hist.png` | Same column at **5 / 30 / 80 bins** — bin count is itself an analytical choice |
+| 3 | `multi_column_distributions_hist.png` | 2×3 grid, one histogram per numeric column — five shapes at a glance |
+| 4 | `salary_per_sector_hist.png` | Translucent overlay, one colour per sector — the cross-group comparison from 4.38, drawn |
+| 5 | `salary_with_central_tendency_hist.png` | Histogram + `axvline` for mean and median — the mean-vs-median gap as visible offset |
+
+The PNGs are written to `outputs/figures/` which is `.gitignored`, so each contributor regenerates them locally by running the script.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.39 — Visualizing Data Distributions Using Histograms."""
+
+from __future__ import annotations
+from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def plot_single_histogram(series: pd.Series, title: str, path: Path) -> Path:
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.hist(series.dropna(), bins="auto", color="steelblue", edgecolor="white")
+    ax.set_title(title)
+    ax.set_xlabel(series.name)
+    ax.set_ylabel("Frequency")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_bin_comparison(series: pd.Series, path: Path) -> Path:
+    """Same data at three bin counts so the reader sees that bin count
+    is a choice, not a fact."""
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
+    for ax, n_bins, label in zip(
+        axes,
+        (5, 30, 80),
+        ("Under-binned (5)", "Reasonable (30)", "Over-binned (80)"),
+    ):
+        ax.hist(series.dropna(), bins=n_bins, color="steelblue", edgecolor="white")
+        ax.set_title(label)
+        ax.set_xlabel(series.name)
+    axes[0].set_ylabel("Frequency")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_overlaid_per_group(
+    frame: pd.DataFrame, group_col: str, target_col: str, path: Path
+) -> Path:
+    """One histogram per group, overlaid with alpha=0.45 on the same axes."""
+    fig, ax = plt.subplots(figsize=(8, 5))
+    palette = ("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd")
+    for color, group in zip(palette, sorted(frame[group_col].dropna().unique())):
+        ax.hist(
+            frame.loc[frame[group_col] == group, target_col].dropna(),
+            bins=24, alpha=0.45, label=group, color=color, edgecolor="white",
+        )
+    ax.set_title(f"{target_col} distribution per {group_col}")
+    ax.legend(title=group_col)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_with_central_tendency(series: pd.Series, path: Path) -> Path:
+    """Histogram + vertical lines for mean and median; the gap is the skew."""
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.hist(series.dropna(), bins=30, color="steelblue", edgecolor="white")
+    mean, median = float(series.mean()), float(series.median())
+    ax.axvline(mean, color="crimson", linestyle="--", linewidth=2,
+               label=f"mean = {mean:.2f}")
+    ax.axvline(median, color="darkorange", linestyle="-", linewidth=2,
+               label=f"median = {median:.2f}")
+    ax.set_title(f"{series.name} — mean vs median (gap = {mean - median:+.2f})")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+```
+
+### Explanation of Each Histogram
+
+#### 1. Single histogram with `bins="auto"`
+
+Matplotlib's `bins="auto"` picks between Sturges' formula and Freedman–Diaconis based on what looks reasonable for the data size and shape. On a 300-row right-skewed `salary_lpa`, it produces a tall block on the left and a thin tail on the right — the *visual* version of the lognormal mean-vs-median gap from 4.37.
+
+#### 2. Three bin counts, same data
+
+Bin count changes the *story*:
+
+- **5 bins** — hides the right tail. The whole distribution looks like one big lump.
+- **30 bins** — shows the peak and the tail together. The right place for this dataset.
+- **80 bins** — introduces spurious gaps from sample-size noise. The shape looks more "interesting" than it really is.
+
+The lesson: **bin count is an analytical decision**, not a default. `"auto"` is defensible; explicit values should match the data size.
+
+#### 3. 2×3 grid — five distribution shapes side-by-side
+
+The five different distribution types from 4.37 / 4.38 in one figure:
+
+- `salary_lpa` — right-skewed (lognormal)
+- `experience_years` — flat-ish uniform
+- `applications_received` — single peak around 8 (Poisson)
+- `interview_score` — bunches against the upper bound (clipped normal)
+- `commute_minutes` — heavy right tail (exponential)
+
+Same X axis style, same Y axis ("Frequency"), so the eye can compare shape directly without translating units.
+
+#### 4. Overlaid per-sector with transparency
+
+Five sectors plotted on the *same* X axis with `alpha=0.45`. The translucency is what makes the overlap readable. The picture tells the same story 4.38's table told:
+
+- **Retail / Manufacturing** concentrate at the lower end.
+- **Finance / Technology** peak higher and have visible right tails.
+- **Healthcare** sits between, narrower than Finance but wider than Retail.
+
+A picture is faster than the table for non-technical viewers, and the table is more precise for technical review — both belong in the report.
+
+#### 5. Histogram with annotated mean and median lines
+
+```python
+ax.axvline(mean,   linestyle="--", color="crimson",   label=f"mean = {mean:.2f}")
+ax.axvline(median, linestyle="-",  color="darkorange", label=f"median = {median:.2f}")
+```
+
+When the dashed mean line sits to the **right** of the solid median line, the distribution is right-skewed; on the left, left-skewed. On `salary_lpa` the gap is `+1.75` (mean = 11.80, median = 10.05) — visible at a glance and labelled in the legend.
+
+### Sample Output (excerpt)
+
+```
+1) Single histogram — default bin count
+   saved -> outputs/figures/salary_distribution_hist.png   (baseline single histogram)
+
+2) Bin-count comparison — same data, three views
+   saved -> outputs/figures/salary_bin_comparison_hist.png
+   Read: 5 bins hides the right tail; 30 bins shows the peak + tail;
+         80 bins introduces spurious gaps from sample-size noise.
+
+3) Multi-column grid — five distribution shapes at a glance
+   saved -> outputs/figures/multi_column_distributions_hist.png
+
+4) Overlaid per-sector — comparing distributions on one axis
+   saved -> outputs/figures/salary_per_sector_hist.png
+
+5) Single histogram + central-tendency reference lines
+   saved -> outputs/figures/salary_with_central_tendency_hist.png
+   Annotated values: mean = 11.80, median = 10.05, gap = +1.75.
+```
+
+### Histogram Cheat Sheet
+
+```
+ax.hist(series, bins="auto")              -> default histogram
+ax.hist(series, bins=N)                   -> explicit bin count
+ax.hist(series, bins=[edges])             -> explicit bin edges
+ax.hist(group_data, alpha=0.45, label=g)  -> overlay per group (call once per group)
+ax.axvline(mean, linestyle="--")          -> annotate a reference value
+fig, axes = plt.subplots(2, 3, ...)       -> grid for many columns
+fig.savefig(path, dpi=120); plt.close()   -> always close to free memory
+
+WHEN TO PREFER WHICH BIN COUNT
+  small N           -> 5-15 bins
+  medium-large N    -> "auto" or 20-40
+  huge N (millions) -> use a KDE or a 2-D heatmap, not a histogram
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/visualize_histograms.py
+ls outputs/figures/*.png
+```
+
+Outputs are gitignored — they regenerate cleanly on every run.
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Using `bins=10` everywhere | Hides important structure on small samples; introduces noise on large ones. `"auto"` is a better default |
+| Overlaying histograms without `alpha=` | Bars from one group hide the others entirely; the comparison is invisible |
+| Forgetting `plt.close(fig)` | Memory leak when generating many figures in a loop |
+| `plt.show()` instead of `fig.savefig()` | Blocks in scripts; non-headless |
+| Choosing bin count to make the chart "look nicer" | Cherry-picks the visual; pick a defensible default once and stick to it |
+| Not labelling axes / legend | Histogram becomes unreadable when extracted from context (slide decks, reports) |
+| Demoing on uniform data | The histogram is a flat rectangle — none of the lessons about peaks, skew, tails get to demonstrate |
+
+### Conclusion
+
+Histograms are the visual companion to summary statistics: every claim 4.37 / 4.38 made about distribution shape should be falsifiable by drawing the picture. The five patterns here cover the full reporting workflow — single column, bin sensitivity, multi-column overview, per-group overlay, central-tendency annotation. With these in place, the boxplot (4.40), line plot (4.41), scatter (4.42), and outlier-detection (4.43) work that follows is mostly a matter of swapping `ax.hist(...)` for `ax.boxplot / ax.plot / ax.scatter` and keeping the rest of the figure-construction skeleton.
 
 ---
 
