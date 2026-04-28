@@ -41,6 +41,7 @@
 - [Assignment 4.33 — Detecting Missing Values in DataFrames](#assignment-433--detecting-missing-values-in-dataframes)
 - [Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies](#assignment-434--handling-missing-values-using-drop-and-fill-strategies)
 - [Assignment 4.35 — Identifying and Removing Duplicate Records](#assignment-435--identifying-and-removing-duplicate-records)
+- [Assignment 4.36 — Standardizing Column Names and Data Formats](#assignment-436--standardizing-column-names-and-data-formats)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -5870,6 +5871,255 @@ python3 -m ruff check src/dedup_records.py
 ### Conclusion
 
 Deduplication is two questions, not one. *"Are these literally the same row?"* is answered by `duplicated()`; *"do these represent the same business entity?"* requires a `subset=` argument that names the natural key. Both questions matter — and the verification step at the end (shape, primary-key uniqueness, residual count) is what turns the cleaning step from *hope* into a checked invariant for everything that follows.
+
+---
+
+## Assignment 4.36 — Standardizing Column Names and Data Formats
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+The single biggest source of avoidable bugs in a Pandas pipeline is inconsistent labels and inconsistent casing. A column named `"Job Title"` and a column named `"job_title"` look identical to a human and are completely different to the framework. A sector encoded as `"Technology"` in some rows, `"TECHNOLOGY"` in others, and `"  technology "` in a few will produce three "different" groups when you call `groupby("sector")` — and a wrong analysis.
+
+Standardisation is the cleaning step that erases these *cosmetic* differences so downstream code can treat semantically-equal values as equal. Four targets:
+
+1. **Column names** — `snake_case`, no spaces, no special characters
+2. **Categorical text** — strip + lowercase + canonical alias map
+3. **Numeric formats** — strip currency / commas, coerce to float
+4. **Date formats** — mixed `YYYY-MM-DD` / `DD/MM/YYYY` → `datetime64[ns]`
+
+### File Name
+
+`src/standardize_data.py`
+
+### Why Demoing on a Tidy CSV Is Pointless
+
+The bundled CSV's column names are already snake_case, dates already parse, sector values are already canonical. The standardiser running on it is a no-op. To make the lesson real, the script generates a **60-row deliberately dirty frame**:
+
+| Surface | Variants seeded in |
+|---|---|
+| **Column names** | `"Job ID"`, `"Job  Title"` (double space), `"Sector!"`, `" EXPERIENCE_YEARS "`, `"Salary (LPA)"`, `"Date Posted"` |
+| **Sector values** | `"Technology"`, `"TECHNOLOGY"`, `"  technology "`, `"Tech"`, `"tech."`, `"Finance"`, `"  fin "`, `"health"`, `"mfg"`, `"MFG"`, `"Retail"` … (16 distinct surface forms) |
+| **Job titles** | Mixed case, leading/trailing whitespace, `"  Data  Analyst  "` (double internal space) |
+| **Salary values** | Half are bare floats (`"7.5"`), half currency strings (`"$21.2"`) |
+| **Date values** | Half `YYYY-MM-DD`, half `DD/MM/YYYY` |
+
+After standardisation: column names all `snake_case`, `sector.nunique()` collapses **16 → 5**, salary becomes `Float64` (arithmetic works), dates become `datetime64[ns]` (`.dt` accessor works).
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.36 — Standardizing Column Names and Data Formats."""
+
+from __future__ import annotations
+import re
+import numpy as np
+import pandas as pd
+
+
+CANONICAL_SECTORS = ("technology", "finance", "healthcare", "retail", "manufacturing")
+SECTOR_ALIASES = {
+    "tech": "technology", "tech.": "technology", "it": "technology",
+    "fin": "finance", "health": "healthcare", "mfg": "manufacturing",
+}
+
+_NON_ALPHANUMERIC = re.compile(r"[^0-9a-z]+")
+
+
+def standardize_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    """strip + lower + collapse non-[a-z0-9] runs to '_' + trim '_'."""
+    def normalise(name: str) -> str:
+        lowered = name.strip().lower()
+        return _NON_ALPHANUMERIC.sub("_", lowered).strip("_")
+    return frame.rename(columns={c: normalise(c) for c in frame.columns})
+
+
+def standardize_text(series: pd.Series, aliases=None) -> pd.Series:
+    """strip + collapse internal whitespace + lowercase + alias map."""
+    cleaned = (
+        series.astype("string")
+        .str.strip()
+        .str.replace(r"[.\s]+", " ", regex=True)
+        .str.strip()
+        .str.lower()
+    )
+    return cleaned.replace(aliases) if aliases else cleaned
+
+
+def standardize_numeric(series: pd.Series) -> pd.Series:
+    """strip $ and , then pd.to_numeric(errors='coerce')."""
+    cleaned = (
+        series.astype("string")
+        .str.replace("$", "", regex=False)
+        .str.replace(",", "", regex=False)
+        .str.strip()
+    )
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
+def standardize_dates(series: pd.Series) -> pd.Series:
+    """Try YYYY-MM-DD; fall back to DD/MM/YYYY for any rows that didn't match."""
+    iso = pd.to_datetime(series, format="%Y-%m-%d", errors="coerce")
+    eu = pd.to_datetime(series, format="%d/%m/%Y", errors="coerce")
+    return iso.fillna(eu)
+
+
+def apply_full_recipe(frame: pd.DataFrame) -> pd.DataFrame:
+    """Column-name + value standardisation in one call."""
+    standardised = standardize_columns(frame).copy()
+    standardised["job_title"] = standardize_text(standardised["job_title"])
+    standardised["sector"] = standardize_text(
+        standardised["sector"], aliases=SECTOR_ALIASES
+    )
+    standardised["salary_lpa"] = standardize_numeric(standardised["salary_lpa"])
+    standardised["date_posted"] = standardize_dates(standardised["date_posted"])
+    return standardised
+```
+
+### Explanation of Each Step
+
+#### 1. Column-name standardisation
+
+```python
+"Job ID"              -> "job_id"
+"Job  Title"          -> "job_title"      # double space collapsed
+"Sector!"             -> "sector"         # special char dropped
+"Salary (LPA)"        -> "salary_lpa"     # parens replaced by '_'
+" EXPERIENCE_YEARS "  -> "experience_years"
+"Date Posted"         -> "date_posted"
+```
+
+The recipe is purely lexical: strip, lowercase, replace any run of non-alphanumeric characters with a single underscore, then trim leading/trailing underscores. This is reversible only by hand — it cannot infer that `"DOB"` should expand to `"date_of_birth"`. For semantic renames, follow up with an explicit `frame.rename(columns={...})`.
+
+#### 2. Categorical text — strip + lowercase + alias map
+
+```python
+sector value counts BEFORE     after standardize_text+aliases:
+  Technology       8                    technology     14
+  TECHNOLOGY       4                    finance        12
+  "  technology "  2                    manufacturing  10
+  Tech             4                    retail         12
+  tech.            2                    healthcare     12
+  Finance          5
+  FINANCE          4                    Distinct: 16 -> 5
+  "  fin "         3
+  Healthcare       4
+  ... (16 surface forms)
+```
+
+The lexical step (`strip + lowercase`) closes the case-and-whitespace variants. The alias map (`{"tech": "technology", ...}`) closes the **abbreviation** variants — those are *semantic* equivalences that no purely-lexical rule can detect. The combination collapses 16 surface forms onto the 5 canonical sectors, which is what every downstream `groupby("sector")` will rely on.
+
+#### 3. Numeric — strip currency, coerce to float
+
+```python
+before -> ['$21.2', '7.5', '10.8', '$45.1', '6.7']
+after  -> [21.2, 7.5, 10.8, 45.1, 6.7]   # Float64
+
+salary dtype: object -> Float64
+salary_clean.sum() -> 732.50   # arithmetic now works
+```
+
+`pd.to_numeric(errors="coerce")` is the canonical workhorse — anything unparseable becomes `NaN` instead of raising, so the whole step is deterministic. The string-strip pass beforehand removes the currency prefix and any thousands separator that would block parsing.
+
+#### 4. Dates — fall-through parse for mixed formats
+
+```python
+before -> ['2024-01-07', '04/05/2024', '2024-03-17', '25/04/2024']
+after  -> [Timestamp('2024-01-07'), Timestamp('2024-05-04'),
+           Timestamp('2024-03-17'), Timestamp('2024-04-25')]
+
+unparseable rows -> 0
+```
+
+The trick is to parse with `format="%Y-%m-%d"` first (NaT for everything that doesn't match), then `fillna()` from a second parse with `format="%d/%m/%Y"`. The result is a single `datetime64[ns]` Series — anything that matched neither format remains `NaT`, which is the right signal for "this date string is genuinely broken."
+
+Letting `pd.to_datetime` infer formats without `format=` works on small frames but is dangerous: it may guess differently for different rows, silently converting `04/05/2024` as April-5 in some rows and May-4 in others. **Always pass `format=`** when you know the format(s).
+
+### Sample Output (excerpt)
+
+```
+1) Column names — before vs after:
+  ['Job ID', 'Job  Title', 'Sector!', ' EXPERIENCE_YEARS ', 'Salary (LPA)', 'Date Posted']
+  -> ['job_id', 'job_title', 'sector', 'experience_years', 'salary_lpa', 'date_posted']
+
+2) sector value counts after standardisation:
+  technology       14
+  finance          12
+  manufacturing    10
+  retail           12
+  healthcare       12
+  Distinct: 16 -> 5
+
+3) Salary: object -> Float64;   salary_clean.sum() = 732.50
+4) Date:   object -> datetime64[ns];   0 unparseable rows
+
+5) Cleaned head(5):
+   job_id  job_title         sector         experience_years  salary_lpa  date_posted
+   4001    data scientist    technology     3                 21.2        2024-01-07
+   4002    backend engineer  manufacturing  7                 7.5         2024-05-04
+   4003    ml engineer       manufacturing  2                 10.8        2024-03-17
+   4004    data analyst      finance        11                45.1        2024-04-25
+   4005    data scientist    technology     6                 6.7         2024-02-17
+
+   Cleaned dtypes:
+     job_id              int64
+     job_title           string
+     sector              string
+     experience_years    int64
+     salary_lpa          Float64
+     date_posted         datetime64[ns]
+```
+
+### Standardisation Cheat Sheet
+
+```
+COLUMN NAMES
+  frame.rename(columns=normalise)
+    where normalise(name) =
+      strip + lower + non-alnum -> '_' + trim '_'
+
+TEXT VALUES
+  series.str.strip().str.replace(r"[.\s]+", " ", regex=True).str.strip().str.lower()
+  then .replace(alias_map)
+
+NUMERIC
+  series.str.replace("$", "").str.replace(",", "")
+  pd.to_numeric(..., errors="coerce")
+
+DATES
+  pd.to_datetime(..., format="%Y-%m-%d", errors="coerce")
+    .fillna(pd.to_datetime(..., format="%d/%m/%Y", errors="coerce"))
+
+RULE OF THUMB
+  Keep an explicit alias dict for categorical canonicalisation;
+  purely-lexical normalisation cannot infer 'IT' == 'Technology'.
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/standardize_data.py
+python3 -m black src/standardize_data.py
+python3 -m ruff check src/standardize_data.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Letting `pd.to_datetime` infer format without `format=` | `04/05/2024` parsed as April-5 in some rows, May-4 in others |
+| Skipping the alias map for categoricals | `"tech"` and `"technology"` survive as separate groups |
+| Stripping whitespace but not collapsing internal double-spaces | `"  Data  Analyst  "` and `"Data Analyst"` stay distinct |
+| Using `regex=True` on `str.replace("$", "")` | `$` is a regex anchor — accidentally matches end-of-string |
+| Standardising column names by hand for every frame | Drift across notebooks; a one-line `standardize_columns()` is reusable |
+| Demoing only on a clean CSV | The standardiser is a no-op; the lesson reads as theoretical |
+
+### Conclusion
+
+Standardisation is the cleaning step that lets every later operation assume *equal-looking values are equal*. Without it, `groupby("sector")` invents groups, joins miss rows, and aggregates double-count. The four-target recipe — columns, text, numerics, dates — covers virtually every real-world inconsistency you'll meet at the disk-to-frame boundary, and the alias map is what closes the long tail of "same thing, different word" cases that purely-lexical rules can't.
 
 ---
 
