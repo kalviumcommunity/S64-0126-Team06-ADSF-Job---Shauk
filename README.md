@@ -40,6 +40,7 @@
 - [Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing](#assignment-432--selecting-rows-and-columns-using-indexing-and-slicing)
 - [Assignment 4.33 — Detecting Missing Values in DataFrames](#assignment-433--detecting-missing-values-in-dataframes)
 - [Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies](#assignment-434--handling-missing-values-using-drop-and-fill-strategies)
+- [Assignment 4.35 — Identifying and Removing Duplicate Records](#assignment-435--identifying-and-removing-duplicate-records)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -5676,6 +5677,199 @@ python3 -m ruff check src/handle_missing_values.py
 ### Conclusion
 
 Drop and fill are the two operations that actually *do* something with the missingness 4.33 detected. The right call depends on the column: critical-but-rarely-missing columns (`date_posted` at 5%) get dropped at the row level; skewed numerics with structured missingness (`salary_lpa`, `benefits_score`) get a per-sector median; categorical columns where "missing" carries information (`perks`) get a `"Unknown"` constant. The combined recipe at the end of the script encodes those choices, and the resulting frame is ready for the deduplication (4.35) and standardisation (4.36) steps that follow.
+
+---
+
+## Assignment 4.35 — Identifying and Removing Duplicate Records
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Duplicate rows are the silent inflator of every aggregate metric: counts double, averages stay roughly right, distributions look plausible, and a downstream "we have 1,200 unique postings" turns into a confidence-eroding "well, actually 1,043." Deduplication is therefore one of the standard cleaning steps — but it's also one of the easiest to get wrong, because *"duplicate"* means different things in different contexts.
+
+### File Name
+
+`src/dedup_records.py`
+
+### Two Kinds of Duplicates Injected on Purpose
+
+The script generates a 114-row frame seeded as **100 unique rows + 8 exact duplicates + 6 logical duplicates**. Two duplicate kinds, two detection strategies:
+
+| Kind | What it looks like | Example | Caught by |
+|---|---|---|---|
+| **Exact** | Byte-identical row re-appended | `(3016, "Backend Engineer", "Beta Inc", ..., 4.9)` and `(3016, "Backend Engineer", "Beta Inc", ..., 4.9)` | `duplicated()` |
+| **Logical** | Same job, different `job_id` (re-posted) | `(3043, "Backend Engineer", "Epsilon Group", ..., 6.4)` and `(3102, "Backend Engineer", "Epsilon Group", ..., 6.4)` | `duplicated(subset=business_keys)` |
+
+The exact-duplicate detector finds 8 of 14 — it cannot see logical duplicates because their `job_id` differs. The subset-aware detector finds all 14. This is the difference between *"are these literally the same row"* and *"do these represent the same business entity"*.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.35 — Identifying and Removing Duplicate Records."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+BUSINESS_KEYS = ["job_title", "company", "sector", "salary_lpa", "date_posted"]
+
+
+def duplicate_mask(frame: pd.DataFrame, subset=None) -> pd.Series:
+    """duplicated() -- True where the row matches an earlier row."""
+    return frame.duplicated(subset=subset)
+
+
+def duplicate_groups(frame: pd.DataFrame, subset: list[str]) -> pd.DataFrame:
+    """Return all rows that participate in any duplicate group (incl. the first
+    occurrence) -- handy for inspection before deciding to drop."""
+    mask = frame.duplicated(subset=subset, keep=False)
+    return frame[mask].sort_values(subset).reset_index(drop=True)
+
+
+def drop_exact_duplicates(frame: pd.DataFrame, keep="first") -> pd.DataFrame:
+    """Drop byte-identical duplicate rows."""
+    return frame.drop_duplicates(keep=keep)
+
+
+def drop_by_subset(
+    frame: pd.DataFrame, subset: list[str], keep="first"
+) -> pd.DataFrame:
+    """Drop logical duplicates -- rows that match on `subset`, ignoring others."""
+    return frame.drop_duplicates(subset=subset, keep=keep)
+
+
+def drop_all_duplicate_rows(frame: pd.DataFrame, subset=None) -> pd.DataFrame:
+    """keep=False drops every row that participates in a duplicate group."""
+    return frame.drop_duplicates(subset=subset, keep=False)
+```
+
+### Explanation of Each Step
+
+#### 1. Detection: `duplicated()` boolean mask
+
+```python
+frame.duplicated()                             # mask of exact duplicates
+frame.duplicated(subset=business_keys)         # mask of logical duplicates
+frame.duplicated(subset=business_keys, keep=False)  # flag ALL group members
+```
+
+`duplicated()` returns a same-length boolean Series — `True` for every row that matches an *earlier* row. The default is `keep="first"`, meaning the first occurrence is kept (flagged `False`) and every later copy is flagged `True`. `keep=False` is the inspection mode: every row in a duplicate group is flagged, including the original, so you can pull the whole pair/triple out for review.
+
+#### 2. Counting
+
+```python
+frame.duplicated().sum()                       # 8 exact duplicates here
+frame.duplicated(subset=business_keys).sum()   # 14 logical (8 exact + 6 re-posts)
+```
+
+The count tells you how lossy the cleaning step will be *before* you commit. On this frame: 8 exact, 6 logical, 14 total — meaning the cleaned shape will be `(100, 7)` from `(114, 7)`, a 12% reduction.
+
+#### 3. Removal: three `keep` modes
+
+```python
+frame.drop_duplicates(keep="first")    # default — preserves earliest record
+frame.drop_duplicates(keep="last")     # preserves latest (corrected?) record
+frame.drop_duplicates(keep=False)      # drops ALL members of a duplicate group
+```
+
+| Mode | Result here | Use it when |
+|---|---|---|
+| `"first"` | `(106, 7)` | Default; first record is canonical |
+| `"last"` | `(106, 7)` | Later rows have corrected / more recent info |
+| `False` | `(98, 7)` | Duplicate signals corruption; trust no copy |
+
+#### 4. Subset removal — collapsing logical duplicates
+
+```python
+frame.drop_duplicates(subset=business_keys)
+```
+
+`subset=` is the only way to catch logical duplicates — those rows where `job_id` differs but every business field matches. On this frame: 114 → 100 rows, removing both the 8 exact *and* the 6 logical duplicates in one call. The 6 logical removals are the difference between exact and subset dedup; without `subset`, they survive.
+
+#### 5. Verification — shape + integrity check
+
+```python
+cleaned = frame.drop_duplicates(subset=business_keys)
+assert cleaned.shape[0] == 100
+assert cleaned["job_id"].is_unique
+assert not cleaned.duplicated(subset=business_keys).any()
+```
+
+A dedup step without verification is hope, not engineering. Three checks:
+
+- **Shape** — did we remove the expected number of rows?
+- **Primary-key integrity** — is the natural key (`job_id`) actually unique now?
+- **Residual duplicates** — does another `duplicated()` call still return any `True`?
+
+If any of these fails, the dedup logic is wrong and the rest of the pipeline will inherit the error.
+
+### Sample Output (excerpt)
+
+```
+1) duplicated().sum()                           -> 8     (exact)
+2) duplicated(subset=business_keys).sum()       -> 14    (8 exact + 6 logical)
+
+   Logical duplicate pair example:
+     job_id  job_title         company        sector       salary_lpa
+     3043    Backend Engineer  Epsilon Group  Healthcare   6.4
+     3102    Backend Engineer  Epsilon Group  Healthcare   6.4    <- different id, same job
+
+3) drop_duplicates(keep='first')                shape=(106, 7)  residual=0
+   drop_duplicates(keep='last')                 shape=(106, 7)  residual=0
+   drop_duplicates(keep=False)                  shape=(98,  7)  residual=0
+
+4) drop_duplicates(subset=business_keys)        shape=(100, 7)  residual=0
+   Source rows: 114 -> after subset dedup: 100  (removed 14)
+
+5) Verification:
+   source.shape       = (114, 7)
+   cleaned.shape      = (100, 7)
+   rows_removed       = 14  (expected = 14)
+   job_id is unique?  = True
+   cleaned.duplicated(subset=keys).any() = False  (must be False)
+```
+
+### Dedup Cheat Sheet
+
+```
+frame.duplicated()                          -> mask of exact dupes
+frame.duplicated(subset=cols)               -> mask by subset
+frame.duplicated(keep=False)                -> flag ALL group members
+frame.duplicated().sum()                    -> count
+frame.drop_duplicates()                     -> default keep='first'
+frame.drop_duplicates(keep='last')          -> keep latest copy
+frame.drop_duplicates(keep=False)           -> drop entire dupe groups
+frame.drop_duplicates(subset=cols)          -> by subset (logical dedup)
+frame['key'].is_unique                      -> integrity assertion
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/dedup_records.py
+python3 -m black src/dedup_records.py
+python3 -m ruff check src/dedup_records.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Calling `drop_duplicates()` with default args and assuming all dupes are gone | Logical duplicates (different IDs) survive |
+| Including `job_id` in the subset | Logical re-posts cannot be detected; nothing collapses |
+| Using `keep=False` as the default | Originals get dropped along with duplicates; data loss without intent |
+| Skipping the post-dedup integrity check | Silent bugs in the dedup logic propagate downstream |
+| Sorting before dedup but forgetting `keep="last"` | Wrong row preserved when you wanted the latest |
+| Demoing on a frame with no duplicates | The lesson cannot show what `duplicated()` actually finds |
+| Assuming `duplicated()` and `duplicated(keep=False)` count the same | They differ by exactly the count of "first occurrence" rows in groups |
+
+### Conclusion
+
+Deduplication is two questions, not one. *"Are these literally the same row?"* is answered by `duplicated()`; *"do these represent the same business entity?"* requires a `subset=` argument that names the natural key. Both questions matter — and the verification step at the end (shape, primary-key uniqueness, residual count) is what turns the cleaning step from *hope* into a checked invariant for everything that follows.
 
 ---
 
