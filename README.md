@@ -43,6 +43,7 @@
 - [Assignment 4.35 — Identifying and Removing Duplicate Records](#assignment-435--identifying-and-removing-duplicate-records)
 - [Assignment 4.36 — Standardizing Column Names and Data Formats](#assignment-436--standardizing-column-names-and-data-formats)
 - [Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns](#assignment-437--computing-basic-summary-statistics-for-individual-columns)
+- [Assignment 4.38 — Comparing Distributions Across Multiple Columns](#assignment-438--comparing-distributions-across-multiple-columns)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -6330,6 +6331,224 @@ python3 -m ruff check src/column_stats.py
 ### Conclusion
 
 `mean` and `median` are not interchangeable; `std` and `IQR` are not interchangeable. Picking the right one depends on what the column's distribution actually looks like — and the cheapest way to find that out is to look at both pairs side by side. The five-distribution demo here turns that habit into reflex: a quick scan of `(mean, median, gap, std, iqr, ratio)` per column tells you which features are well-behaved (symmetric, low spread) and which need careful handling later (heavy-tailed, skewed) before any aggregation or modelling step.
+
+---
+
+## Assignment 4.38 — Comparing Distributions Across Multiple Columns
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+4.37 computed every statistic on five differently-shaped columns side by side. This assignment goes one step further: it *compares* those distributions, both **across columns** and **across groups within a column**. Comparison is what turns a per-column summary into an insight.
+
+Two kinds of comparison are demonstrated, each with its own toolkit:
+
+- **A) Across columns (different units)** — std on `salary_lpa` and std on `commute_minutes` are not comparable directly because LPA and minutes are different units. Unit-free metrics are needed: **coefficient of variation** (`CV = std / mean`) and **z-score normalisation**.
+- **B) Across groups within one column (same units)** — per-sector salary, per-role experience. The *real* comparisons that surface stories. `groupby` + central tendency + spread + a robust anomaly flag.
+
+### File Name
+
+`src/compare_distributions.py`
+
+### Why a Sector-Conditioned Frame
+
+The 200-row synthetic frame **conditions salary on sector** so per-group comparisons surface real differences:
+
+| Sector | Lognormal μ | Lognormal σ | Expected behaviour |
+|---|---:|---:|---|
+| Technology | 2.7 | 0.45 | Higher mean, moderate spread |
+| Finance | 2.6 | 0.55 | High mean, **wider spread** |
+| Healthcare | 2.3 | 0.35 | Mid mean, **tight spread** |
+| Retail | 2.0 | 0.30 | Lower mean, very tight |
+| Manufacturing | 2.1 | 0.40 | Lower mean, slightly wider |
+
+Without this conditioning, `groupby("sector")["salary_lpa"]` would just return five samples from the same distribution and the comparison would be noise.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.38 — Comparing Distributions Across Multiple Columns."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def coefficient_of_variation(series: pd.Series) -> float:
+    """Unit-free spread metric: std / mean."""
+    mean = float(series.mean())
+    return float("nan") if mean == 0 else float(series.std()) / mean
+
+
+def z_score_frame(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Standardise each column to mean=0, std=1 so columns share a common scale."""
+    return frame[columns].apply(lambda s: (s - s.mean()) / s.std())
+
+
+def per_group_summary(
+    frame: pd.DataFrame, group_col: str, target: str
+) -> pd.DataFrame:
+    """Per-group mean / median / std / IQR / gap (mean - median)."""
+    grouped = frame.groupby(group_col, observed=True)[target]
+    summary = pd.DataFrame({
+        "count": grouped.count(),
+        "mean": grouped.mean().round(2),
+        "median": grouped.median().round(2),
+        "std": grouped.std().round(2),
+        "iqr": (grouped.quantile(0.75) - grouped.quantile(0.25)).round(2),
+    })
+    summary["gap"] = (summary["mean"] - summary["median"]).round(2)
+    return summary.sort_values("median", ascending=False)
+
+
+def flag_anomalous_groups(
+    per_group: pd.DataFrame, std_multiplier: float = 1.5
+) -> pd.Series:
+    """MAD-based outlier flag for groups whose mean is far from peer median.
+    Robust against any single extreme group pulling the threshold to itself."""
+    means = per_group["mean"]
+    median_of_means = means.median()
+    mad = (means - median_of_means).abs().median()
+    if mad == 0:
+        return pd.Series(["typical"] * len(means), index=means.index)
+    distance = (means - median_of_means).abs() / mad
+    return distance.where(distance >= std_multiplier).map(
+        lambda d: "anomalous" if pd.notna(d) else "typical"
+    )
+```
+
+### Explanation of Each Comparison Tool
+
+#### A1) Cross-column CV ranking — unit-free spread
+
+```
+                          mean  median   std    iqr    cv
+column
+commute_minutes          37.50  29.00  35.04  44.50  0.935    <- most variable
+salary_lpa               11.96   9.65   7.00   8.41  0.585    <-   relative to its mean
+applications_received     8.06   8.00   2.83   4.00  0.351
+interview_score           7.90   7.90   1.18   1.43  0.150
+experience_years          5.42   5.00   3.42   6.00  0.631
+```
+
+Picking std alone, `commute_minutes` (35.0) towers over `interview_score` (1.18). But minutes and a 1–10 score live on different scales — the comparison is meaningless. CV (`std/mean`) is unit-free and gives the actual relative-volatility ranking: commute is 6× as variable as interview score *relative to its own scale*.
+
+#### A2) Z-score normalisation — common scale for cross-column outliers
+
+```
+                       z_min  z_max  z_range
+column
+commute_minutes        -1.07   6.27     7.34   <- heavy right tail
+salary_lpa             -0.94   4.13     5.07
+applications_received  -1.43   2.81     4.24
+experience_years       -1.59   1.63     3.22
+interview_score        -3.31   1.78     5.09   <- left tail from clipping
+```
+
+After standardisation, every value is "how many std away from the column's mean." A normal distribution rarely produces values past ±3; columns whose `z_range` exceeds ~6 are heavier-tailed than normal. `commute_minutes` reaches **6.27 std above its mean** — that's the heavy-right-tail fingerprint of an exponential.
+
+#### B1) Per-sector salary distribution — same column, different groups
+
+```
+                count   mean  median   std    iqr   gap
+sector
+Technology       30   17.13   15.45   8.53   8.23   1.68
+Finance          40   17.43   14.60   9.14  12.00   2.83   <- highest spread
+Healthcare       44   10.13    9.40   3.94   4.80   0.73
+Manufacturing    36    9.59    9.25   3.16   4.80   0.34
+Retail           50    7.81    8.05   1.73   2.27  -0.24   <- tightest
+```
+
+Reading: Finance and Technology pay the highest median salaries — but Finance has an IQR of `12.00` versus Technology's `8.23`, meaning Finance pay is **much more spread out** even though the medians are close. Reporting only "median salary by sector" hides that story; reporting both centre and spread surfaces it.
+
+#### B2) MAD-based anomaly flag
+
+```
+                count   mean   median   std    iqr   gap     verdict
+sector
+Technology       30   17.13   15.45   8.53   8.23  1.68   anomalous
+Finance          40   17.43   14.60   9.14  12.00  2.83   anomalous
+Healthcare       44   10.13    9.40   3.94   4.80  0.73   typical
+Manufacturing    36    9.59    9.25   3.16   4.80  0.34   typical
+Retail           50    7.81    8.05   1.73   2.27 -0.24   typical
+```
+
+Method: compute `|sector_mean - median(all sector means)| / MAD`. Flag groups whose distance ≥ 1.5. Using MAD (median absolute deviation) instead of std makes the threshold robust — if you used std, the outlier groups themselves would inflate the std and hide.
+
+#### C) Paired column comparison — sometimes std is wrong, CV is right
+
+```
+        interview_score  salary_lpa
+mean              7.902      11.962
+median            7.900       9.650
+std               1.185       6.999
+cv                0.150       0.585
+```
+
+`salary.std (6.99)` is much bigger than `interview.std (1.18)` — but `salary.cv (0.585)` is almost 4× `interview.cv (0.150)`. Salary is **genuinely more variable as a fraction of its scale**, regardless of unit. The std comparison agrees with the CV comparison here, but on different units it wouldn't have to.
+
+#### D) Robust spread: `P95 - P5` instead of `max - min`
+
+```
+                        p5     p95   robust_range  full_range  tail_inflation
+column
+commute_minutes        2.0  106.10   104.10        257.0        2.47   <- heavy tails
+salary_lpa             5.6   28.45    22.85         40.9        1.79
+applications_received  4.0   14.00    10.00         16.0        1.60
+interview_score        6.0   10.00     4.00          5.2        1.30
+experience_years       0.0   11.00    11.00         11.0        1.00   <- bounded uniform
+```
+
+`tail_inflation = (max - min) / (P95 - P5)`. A value near 1 means the full range is essentially the middle-90% range; values much greater than 1 mean a few extreme observations sit far beyond the bulk. `commute_minutes` at 2.47 is the canonical heavy-tail offender.
+
+### Comparison Cheat Sheet
+
+```
+ACROSS COLUMNS (different units)
+  coefficient of variation:   series.std() / series.mean()
+  z-score normalisation:      (series - series.mean()) / series.std()
+
+ACROSS GROUPS (same units)
+  grouped = frame.groupby(g)[c]
+  grouped.mean() / .median() / .std() / .quantile([.25, .5, .75])
+  median - across - groups + MAD = robust outlier detection
+
+ROBUST RANGE
+  P95 - P5 instead of max - min (ignores extreme tails)
+
+RULES OF THUMB
+  1. Comparing std across different units is wrong; use CV.
+  2. Comparing groups by mean alone hides the spread story; report
+     centre AND spread together.
+  3. Heavy-tailed columns: median + IQR + (P95 - P5) instead of
+     mean + std + (max - min).
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/compare_distributions.py
+python3 -m black src/compare_distributions.py
+python3 -m ruff check src/compare_distributions.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Comparing `std` across columns of different units | Meaningless ranking; use CV (`std/mean`) instead |
+| Reporting per-group means without per-group spread | Misses the "Finance pays well *but* spreads pay widely" story |
+| Using `mean ± std` to flag anomalous groups | One extreme group pulls the std to itself; threshold becomes blind to it |
+| Using `max - min` as the spread headline | A single outlier dominates; `P95 - P5` is more honest |
+| Comparing distributions on a frame where groups *don't* differ | Per-group output is noise; nothing to surface |
+| Z-scoring without `from __future__ import annotations` and Pandas-aware lambdas | Subtle dtype quirks; the helper here does it cleanly |
+
+### Conclusion
+
+Comparison is the step that turns "we computed some statistics" into "we found a story." Two questions matter — *across columns* (handled with CV / z-score) and *across groups within a column* (handled with `groupby` + per-group summary + MAD-based anomaly flag). Both report **centre and spread together**, and both prefer robust metrics (median, IQR, P95−P5, MAD) when the underlying distribution is skewed or heavy-tailed. Once these comparisons are routine, the visualisation work that follows (4.39 histograms, 4.40 boxplots, 4.42 scatter, 4.43 outlier detection) is mostly *picturing* what the numbers already said.
 
 ---
 
