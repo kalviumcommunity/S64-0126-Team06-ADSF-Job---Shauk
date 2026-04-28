@@ -74,10 +74,10 @@
 |---|---:|---:|---:|---:|
 | Harshita Soni ★ (on leave) | 0 | 0 | 0 | 0 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe (incl. analyst cover) | 18 | 0 | 11 | 29 |
-| **Overall** | **28** | **0** | **16** | **44** |
+| Bhargav Kalambhe (incl. analyst cover) | 19 | 0 | 10 | 29 |
+| **Overall** | **29** | **0** | **15** | **44** |
 
-Done: **28 / 44** (~64%)
+Done: **29 / 44** (~66%)
 
 ---
 
@@ -132,6 +132,7 @@ Done: **28 / 44** (~64%)
 | 2026-04-28 | Bhargav Kalambhe | Completed 4.34: `src/handle_missing_values.py` — five drop/fill strategies demonstrated side-by-side on the 4.33 shaped-missingness frame so trade-offs are visible. Drop variants show row losses: `dropna(how='any')` -43, `dropna(subset=['salary','date'])` -13, `dropna(thresh=ncols-1)` -16, column-level drop at >25% rate -2 cols. Numeric fill variants compare mean / median / per-sector median (`groupby.transform`). Categorical fill shows the mode-fill distortion concretely: `perks` mode-fill inflates `gym` from 16 → 49 by absorbing 33 NaN, while constant fill (`'Unknown'`) preserves the missingness signal as a visible 33-row bucket. The defensible per-column recipe (per-sector median for skewed numerics, row drop for date_posted, `'Unknown'` for perks, per-sector median for benefits_score) reduces (100, 8) → (94, 8) with zero remaining missing cells. Branch `data4.34` off `data4.33`. |
 | 2026-04-28 | Bhargav Kalambhe | Completed 4.35: `src/dedup_records.py` — duplicate-handling routine on a 114-row synthetic frame seeded as 100 unique + 8 **exact** duplicates (byte-identical re-appends) + 6 **logical** duplicates (same `job_title`/`company`/`sector`/`salary_lpa`/`date_posted` but a fresh `job_id`, modelling the ATS re-post pattern). The default `duplicated()` finds only the 8 exact dupes; `duplicated(subset=business_keys)` finds all 14. Demonstrates the three `keep` modes (`'first'` and `'last'` -> shape (106, 7), `False` -> (98, 7) which also drops the originals), and `drop_duplicates(subset=...)` collapses logical re-posts (114 -> 100). Verification step asserts shape, `job_id.is_unique == True`, and zero residual duplicates after cleaning. Branch `data4.35` off `data4.34`. |
 | 2026-04-28 | Bhargav Kalambhe | Completed 4.36: `src/standardize_data.py` — four-target standardisation recipe on a 60-row deliberately dirty frame. Column-name normaliser collapses `"Job  Title"` → `job_title`, `"Sector!"` → `sector`, `"Salary (LPA)"` → `salary_lpa`, etc. via `re.sub(r"[^0-9a-z]+", "_")`. Text standardiser strips/lowercases and applies an explicit `SECTOR_ALIASES` map (`tech`/`tech.`/`it` → `technology`, `mfg` → `manufacturing`, `health` → `healthcare`, `fin` → `finance`) so 16 surface variants collapse onto the 5 canonical sectors. Numeric standardiser strips `$` and `,` then `pd.to_numeric(errors='coerce')` (object → Float64). Date standardiser uses fall-through parse — `format='%Y-%m-%d'` first, then `fillna(pd.to_datetime(format='%d/%m/%Y'))` — handles mixed YYYY-MM-DD and DD/MM/YYYY in one column with 0 unparseable rows. After: salary mean computable (sum 732.50), `groupby('sector')` produces exactly 5 groups, `.dt` accessor works on date_posted. Branch `data4.36` off `data4.35`. |
+| 2026-04-28 | Bhargav Kalambhe | Completed 4.37: `src/column_stats.py` — summary statistics on a 150-row synthetic frame with **five numeric columns each from a different distribution** (`salary_lpa` lognormal/right-skewed, `experience_years` uniform/symmetric, `applications_received` Poisson, `interview_score` clipped normal, `commute_minutes` exponential/heavy-tail). Computes count/min/max/mean/median/std/var/quartiles/IQR explicitly per column, plus a skewness scanner (mean − median gap) and a std/IQR ratio table compared against the symmetric-distribution fingerprint 0.74. Real signal in output: salary mean 12.79 vs median 12.00 (+0.79 right-skew), commute mean 39.86 vs median 32.00 (+7.86 right-skew), salary std/IQR = 0.98 (heavy tail), experience std/IQR = 0.64 (symmetric). Cross-column IQR ranking identifies commute_minutes as most volatile (51.75) and interview_score as most concentrated (1.38). Branch `data4.37` off `data4.36`. |
 
 ---
 
