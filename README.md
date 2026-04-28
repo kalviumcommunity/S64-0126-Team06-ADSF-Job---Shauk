@@ -38,6 +38,7 @@
 - [Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()](#assignment-430--inspecting-dataframes-using-head-info-and-describe)
 - [Assignment 4.31 — Understanding Data Shapes and Column Data Types](#assignment-431--understanding-data-shapes-and-column-data-types)
 - [Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing](#assignment-432--selecting-rows-and-columns-using-indexing-and-slicing)
+- [Assignment 4.33 — Detecting Missing Values in DataFrames](#assignment-433--detecting-missing-values-in-dataframes)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -5247,6 +5248,228 @@ python3 -m ruff check src/select_rows_columns.py
 ### Conclusion
 
 Selection is the workhorse operation of every Pandas pipeline — every filter, every aggregation, every plot starts with picking out the rows and columns of interest. The seven patterns here cover every shape of selection you'll write: single column, multi column, positional row, label row, combined cells, boolean mask, and safe write. Once these are reflexive, the cleaning suite that follows (4.33–4.36 missing-value detection, drop/fill, dedup, standardisation) is mostly composing them.
+
+---
+
+## Assignment 4.33 — Detecting Missing Values in DataFrames
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Detection comes before cleaning. Before deciding *how* to handle missing data (4.34: drop or fill), every workflow has to answer four detection questions:
+
+1. **Where** is data missing? (boolean mask)
+2. **How much** is missing? (per-column count and proportion)
+3. **Which rows** are affected? (any-axis row reduction)
+4. **Are missingness patterns random or structured?** (column co-occurrence, group-based rates)
+
+### File Name
+
+`src/detect_missing_values.py`
+
+### Why a Random-Missing-Only Demo Isn't Enough
+
+If every NaN in the demo frame is sprinkled randomly, the four detection questions all collapse into the same answer ("about 15% missing, evenly distributed"). The interesting question — *random or structured?* — has no signal to detect. So the script generates a 100-row synthetic frame with **deliberately mixed missingness patterns**:
+
+| Column | Missing rate | Pattern |
+|---|---|---|
+| `salary_lpa` | ~15% | Random across rows |
+| `date_posted` | ~5% | Random across rows |
+| `perks` | ~30% | **Sector-driven** — 70% missing in Manufacturing/Retail, 8% elsewhere |
+| `benefits_score` | ~20% | **Correlated with `perks`** — 80% missing when perks missing, 5% otherwise |
+
+This setup means the co-missing matrix and the per-sector breakdown both have *real* signal to surface — and the lesson reads as practical, not theoretical.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.33 — Detecting Missing Values in DataFrames."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def per_column_counts(frame: pd.DataFrame) -> pd.Series:
+    """Count of missing entries per column."""
+    return frame.isna().sum().sort_values(ascending=False)
+
+
+def per_column_proportions(frame: pd.DataFrame) -> pd.Series:
+    """Fraction of each column that is missing."""
+    return frame.isna().mean().sort_values(ascending=False)
+
+
+def co_missing_matrix(frame: pd.DataFrame) -> pd.DataFrame:
+    """Pairwise count of rows where two columns are both missing.
+
+    A high off-diagonal entry means structured (correlated) missingness.
+    """
+    mask = frame.isna().astype(int)
+    return mask.T @ mask
+
+
+def missingness_by_group(
+    frame: pd.DataFrame, group_col: str, target_col: str
+) -> pd.Series:
+    """Per-group missing rate of `target_col`."""
+    return (
+        frame.groupby(group_col, observed=True)[target_col]
+        .apply(lambda series: series.isna().mean())
+        .sort_values(ascending=False)
+    )
+```
+
+### Explanation of Each Question
+
+#### 1. Where is data missing? — `isna()` boolean mask
+
+```python
+frame.isna()      # same-shape boolean frame, True where missing
+frame.isnull()    # exact synonym; pick one and stick with it
+```
+
+Both names exist for historical reasons. The boolean mask itself is the foundation — every later detection helper is just an aggregation over this mask (`.sum()`, `.mean()`, `.any()`, `.all()`).
+
+#### 2. How much is missing? — counts, proportions, severity
+
+```python
+frame.isna().sum()         # per-column count of NaN
+frame.isna().mean()         # per-column fraction (0.0–1.0)
+frame.isna().sum().sum()    # total missing cells in the frame
+```
+
+Proportions are usually more useful than raw counts because columns are different lengths after filtering. The script also bands the rate into a severity label:
+
+| Rate | Severity |
+|---|---|
+| 0% | complete |
+| <5% | low |
+| <20% | moderate |
+| <50% | high |
+| ≥50% | critical |
+
+Critical-severity columns often need to be dropped entirely; complete columns can be ignored; the moderate band is where the actual fill-vs-drop decisions live.
+
+#### 3. Which rows are affected? — `any` / `all` row reductions
+
+```python
+frame.isna().any(axis=1)         # rows with at least one missing value
+frame.isna().all(axis=1)         # rows where every column is missing
+frame.isna().sum(axis=1)         # missing-count per row, for triage
+```
+
+`axis=1` collapses across columns, leaving one value per row. `any` is the cheapest "do I need to clean this row at all?" check. `all` catches the rare case of a fully-empty row that should just be dropped. `sum(axis=1)` ranks rows by *how* broken they are — handy when manually triaging the worst offenders.
+
+#### 4. Random or structured? — co-occurrence and group breakdown
+
+```python
+mask = frame.isna().astype(int)
+co_matrix = mask.T @ mask          # pairwise co-missing counts
+```
+
+The diagonal of the co-matrix is "rows where THIS column is missing"; off-diagonal cells are "rows where BOTH columns are missing." When two columns are missing together far more than chance would predict, you've found a structural relationship, not random NaN.
+
+Same idea, simpler form: per-group missing rate.
+
+```python
+frame.groupby("sector", observed=True)["perks"].apply(
+    lambda series: series.isna().mean()
+)
+```
+
+If the rate varies dramatically across groups, the missingness is **structured by that group**, and the cleaning strategy needs to know — sector-level fills, for example, instead of a global mean.
+
+### Three Missing Sentinels — One Detection Method
+
+Pandas uses three different sentinels under the hood for "missing":
+
+| Sentinel | Used for | Example dtype |
+|---|---|---|
+| `np.nan` | float / generic | `float64` |
+| `pd.NaT` | datetime / timedelta | `datetime64[ns]` |
+| `pd.NA` | nullable string / Int64 / boolean | `string`, `Int64`, `boolean` |
+
+`isna()` returns `True` for all three. **Never** test for missingness with `value == np.nan` — that comparison is always `False` (NaN ≠ NaN by IEEE 754 rules).
+
+### Sample Output (excerpt)
+
+```
+2) Per-column missing summary (sorted by count):
+
+                  missing_count  missing_rate  severity
+benefits_score              34         0.340      high
+perks                       33         0.330      high
+salary_lpa                   8         0.080  moderate
+date_posted                  6         0.060  moderate
+... (other columns: 0 missing)
+
+3) Row-level detection:
+  Rows with ANY missing : 43 / 100 (43%)
+
+4) Pairwise co-missing counts:
+                salary_lpa  perks  benefits_score  date_posted
+salary_lpa               8      3               3            1
+perks                    3     33              32            2     <- 32 of 33 perks-missing rows ALSO miss benefits
+benefits_score           3     32              34            2
+date_posted              1      2               2            6
+
+Per-sector missing rate of `perks`:
+sector
+Manufacturing    0.731
+Retail           0.647
+Finance          0.111
+Technology       0.053
+Healthcare       0.000     <- structural: not random missingness
+
+5) Three sentinels — all detected by isna():
+            value                     type  isna()_says
+salary_lpa    NaN           np.nan (float)         True
+date_posted   NaT        pd.NaT (datetime)         True
+perks        <NA>  pd.NA (nullable string)         True
+```
+
+### Detection Cheat Sheet
+
+```
+frame.isna() / isnull()      -> same-shape boolean mask
+frame.isna().sum()           -> per-column count
+frame.isna().mean()          -> per-column proportion
+frame.isna().sum().sum()     -> total missing cells
+frame.isna().any(axis=1)     -> rows with at least one missing
+frame.isna().all(axis=1)     -> rows where everything is missing
+frame.isna().sum(axis=1)     -> missing count per row
+mask.T @ mask                -> pairwise co-missing matrix
+frame.groupby(g)[c].apply(lambda s: s.isna().mean())
+                             -> per-group missing rate
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/detect_missing_values.py
+python3 -m black src/detect_missing_values.py
+python3 -m ruff check src/detect_missing_values.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Testing `value == np.nan` | Always returns `False` — NaN is not equal to itself |
+| Reporting only counts, not proportions | Severity is invisible — 100 NaN out of 200 rows is critical, out of 1M rows is fine |
+| Skipping the pattern question | Structured missingness gets cleaned with a wrong (global-mean) strategy |
+| Confusing `isna()` with `notna()` | Negation flip silently inverts the mask; use `~mask` if you need both |
+| Dropping rows with `any` missing without checking severity | A 5%-missing column propagates a 30%+ row-loss when intersected with others |
+| Using `frame.isnull()` in some places and `isna()` in others | Just visual noise; both are the same call |
+| Confusing 0 missing in a tiny demo CSV with "no missing data" | The 3-row bundled CSV detects 0 NaN — legitimate but unhelpful as a teaching demo |
+
+### Conclusion
+
+The four detection questions — *where*, *how much*, *which rows*, *random or structured* — are the diagnostic step before any cleaning decision. Running them on a frame with *deliberately structured* missingness shows why all four matter: a global "fill with mean" strategy is wrong for `perks` because the missingness is sector-driven, not random. The next assignment (4.34) takes the answers from this detection step and turns them into drop / fill choices.
 
 ---
 
