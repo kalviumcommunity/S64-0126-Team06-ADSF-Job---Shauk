@@ -48,6 +48,7 @@
 - [Assignment 4.40 — Visualizing Data Distributions Using Boxplots](#assignment-440--visualizing-data-distributions-using-boxplots)
 - [Assignment 4.41 — Identifying Trends Over Time Using Line Plots](#assignment-441--identifying-trends-over-time-using-line-plots)
 - [Assignment 4.42 — Exploring Relationships Between Variables Using Scatter Plots](#assignment-442--exploring-relationships-between-variables-using-scatter-plots)
+- [Assignment 4.43 — Detecting Outliers Using Visual Inspection and Simple Rules](#assignment-443--detecting-outliers-using-visual-inspection-and-simple-rules)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -7318,6 +7319,159 @@ ls outputs/figures/experience_salary_*.png
 ### Conclusion
 
 Scatter plots are the canonical first chart for any *bivariate* numeric question. With histograms (4.39), boxplots (4.40), line plots (4.41), and now scatter, the visual EDA toolkit covers shape, comparison, time, and relationship. The residual-outlier helper here also feeds directly into the unified outlier story in 4.43.
+
+---
+
+## Assignment 4.43 — Detecting Outliers Using Visual Inspection and Simple Rules
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+This is the synthesis assignment for the visualisation tranche. Histograms (4.39) showed shape, boxplots (4.40) embedded the `1.5×IQR` rule, line plots (4.41) flagged temporal anomalies, scatter plots (4.42) introduced residual outliers. Each said "outlier" while meaning *something different*. This script puts the three numeric definitions side-by-side on one frame, with **three distinct kinds of outliers seeded on purpose**, and reports which method catches which.
+
+### File Name
+
+`src/detect_outliers.py`
+
+### Three Methods, Three Definitions
+
+| Method | Rule | Strength | Weakness |
+|---|---|---|---|
+| **IQR** | `|x − median| > 1.5 × IQR` | Robust against heavy tails (median + IQR don't move with outliers) | Univariate only |
+| **Z-score** | `|(x − mean) / std| > 3` | Classical, fast | Mean and std *are* pulled by outliers — outliers can self-mask |
+| **Residual** | `|y − ŷ| / σ_resid > 2` from regression of `y` on `x` | Catches "unusual *given* the predictor" | Requires a model fit; the fit itself can be distorted by other outliers |
+
+### Three Outlier Types Seeded into the 200-Row Frame
+
+| Type | Count | What it looks like |
+|---|---:|---|
+| `univariate_spike` | 5 | Salaries 45–60 LPA at any experience level — pure spikes |
+| `bivariate_underpaid` | 3 | Senior engineers (≥10 yrs) paid 3–6 LPA — salary alone looks fine |
+| `bivariate_overpaid` | 3 | Junior engineers (≤2 yrs) paid 28–38 LPA — salary alone borderline |
+
+### Five Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `outliers_iqr_boxplot.png` | IQR rule visualised on the salary boxplot |
+| 2 | `outliers_zscore_lollipop.png` | Z-score lollipop with `±3σ` reference lines |
+| 3 | `outliers_residual_scatter.png` | Residual rule on the experience–salary scatter |
+| 4 | `outliers_method_comparison_scatter.png` | Same scatter colour-coded by which method(s) flagged each row |
+| 5 | `outliers_overlap_heatmap.png` | Method-by-method overlap matrix |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.43 — Detecting Outliers: visual inspection + simple rules."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def iqr_outlier_mask(values: pd.Series, multiplier: float = 1.5) -> pd.Series:
+    q1, q3 = values.quantile(0.25), values.quantile(0.75)
+    iqr = q3 - q1
+    return (values < q1 - multiplier * iqr) | (values > q3 + multiplier * iqr)
+
+
+def zscore_outlier_mask(values: pd.Series, threshold: float = 3.0) -> pd.Series:
+    std = values.std()
+    if std == 0:
+        return pd.Series(False, index=values.index)
+    return ((values - values.mean()) / std).abs() > threshold
+
+
+def residual_outlier_mask(
+    x: pd.Series, y: pd.Series, threshold: float = 2.0
+) -> pd.Series:
+    slope, intercept = np.polyfit(x.to_numpy(dtype=float), y.to_numpy(dtype=float), 1)
+    residuals = y - (slope * x + intercept)
+    std = residuals.std()
+    return residuals.abs() / std > threshold if std > 0 else pd.Series(
+        False, index=x.index
+    )
+```
+
+### What the Run Actually Reports
+
+```
+Per-seeded-truth detection — which method caught what:
+
+                     n_total  iqr  zscore  residual
+truth
+bivariate_overpaid         3    3       0         3
+bivariate_underpaid        3    0       0         0     ← all methods missed!
+typical                  189    0       0         0     ← no false positives
+univariate_spike           5    5       5         5
+
+Overlap matrix (rows flagged by both methods):
+          iqr  zscore  residual
+iqr         8       5         8
+zscore      5       5         5
+residual    8       5         8
+```
+
+**Real lessons that fall out of this output:**
+
+1. **All three methods hit `univariate_spike` (5/5).** The 45–60 LPA spikes are extreme on every axis — that's the easy case.
+2. **IQR and Residual catch `bivariate_overpaid` (3/3).** A junior at 30 LPA is an IQR outlier on the salary column AND a residual outlier vs. the regression line — caught twice for two different reasons.
+3. **Z-score misses `bivariate_overpaid`.** Mean and std are inflated by the 5 univariate spikes; the overpaid juniors at 30-38 LPA aren't 3σ above the inflated mean.
+4. **All three methods MISS `bivariate_underpaid` (0/3).** This is the most important teaching moment of the whole tranche:
+   - IQR/Z-score on salary alone: 3-6 LPA looks normal because juniors *do* earn that much.
+   - Residual rule: should have caught these (a senior at 4 LPA has a huge negative residual), but the high-salary spikes elsewhere inflated the residual standard deviation so much that the underpaid cases didn't cross the 2σ threshold. **The detector self-masks** when many outliers are present.
+
+The conclusion: **outlier detection has limits, and combining methods doesn't always cover all cases.** Domain-specific rules (e.g. "any senior earning under the bottom decile of senior pay") often catch what statistical rules can't.
+
+### When To Use Which Rule
+
+| Situation | Right rule |
+|---|---|
+| Skewed univariate column | **IQR** (Z-score is pulled by tails) |
+| Roughly normal univariate column | **Z-score** is fine |
+| Two related variables | **Residual rule** |
+| Time series | Rolling mean ±2σ (4.41) |
+| Many outliers expected | Use a **robust regression** (e.g. Huber) before residuals |
+| Domain knowledge exists | Always pair statistical rules with a domain-specific filter |
+
+### Outlier Cheat Sheet
+
+```
+iqr_outlier_mask(values, 1.5)        -> boxplot rule, robust
+zscore_outlier_mask(values, 3.0)     -> classical, sensitive
+residual_outlier_mask(x, y, 2.0)     -> bivariate, GIVEN-x
+
+RULES OF THUMB
+  1. Outliers depend on the question being asked.
+  2. Detection != deletion -- investigate before removing.
+  3. No single rule catches everything; combine with domain rules.
+  4. Visual inspection + numeric rule, never one alone.
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt
+python3 src/detect_outliers.py
+ls outputs/figures/outliers_*.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Trusting one rule to find all outliers | This script's `bivariate_underpaid` cases evade all three numeric rules |
+| Reporting "outliers" without saying which definition | "We removed outliers" is ambiguous — IQR? Z-score? Residual? |
+| Removing rows because a rule flagged them | The rule could be wrong; investigate before deleting |
+| Z-score on heavy-tailed data | Outliers inflate std and self-mask; use IQR instead |
+| Residual rule on a fit polluted by other outliers | The fit shifts; underpaid cases get hidden (this script's example) |
+| Demoing on data without seeded outliers | The detection methods all return zero; nothing to compare |
+
+### Conclusion
+
+The visualisation tranche (4.39–4.43) ends here. Each chart has its statistical companion: histogram + summary stats; boxplot + IQR rule; line plot + rolling-mean band; scatter + Pearson `r` + residual rule. This synthesis script is the proof that **definition matters** — three numeric rules, three different sets of flagged rows, and one set of seeded outliers that all three missed entirely. The take-away that closes the tranche: pair every numeric rule with the picture, and every picture with domain context.
 
 ---
 
