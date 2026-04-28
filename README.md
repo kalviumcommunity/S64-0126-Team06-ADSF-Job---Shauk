@@ -49,6 +49,7 @@
 - [Assignment 4.41 — Identifying Trends Over Time Using Line Plots](#assignment-441--identifying-trends-over-time-using-line-plots)
 - [Assignment 4.42 — Exploring Relationships Between Variables Using Scatter Plots](#assignment-442--exploring-relationships-between-variables-using-scatter-plots)
 - [Assignment 4.43 — Detecting Outliers Using Visual Inspection and Simple Rules](#assignment-443--detecting-outliers-using-visual-inspection-and-simple-rules)
+- [Assignment 4.44 — Final Project Insights, Assumptions, and Limitations](#assignment-444--final-project-insights-assumptions-and-limitations)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -7472,6 +7473,81 @@ ls outputs/figures/outliers_*.png
 ### Conclusion
 
 The visualisation tranche (4.39–4.43) ends here. Each chart has its statistical companion: histogram + summary stats; boxplot + IQR rule; line plot + rolling-mean band; scatter + Pearson `r` + residual rule. This synthesis script is the proof that **definition matters** — three numeric rules, three different sets of flagged rows, and one set of seeded outliers that all three missed entirely. The take-away that closes the tranche: pair every numeric rule with the picture, and every picture with domain context.
+
+---
+
+## Assignment 4.44 — Final Project Insights, Assumptions, and Limitations
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A README is more than a description of code; it is the story of the project. This closing assignment turns the experiments from 4.29–4.43 into three review-ready sections — what we learned, what we assumed to get there, and where the analysis falls short. The point is to make the project understandable and trustworthy *without* the reviewer having to read every script.
+
+This is a documentation milestone: no new code, no new analysis, just synthesis.
+
+### Final Project Insights
+
+**1. Salary is right-skewed across all sectors.** Throughout 4.30 / 4.37 / 4.38, the synthetic salary distribution had `mean > median` (overall gap of `+0.79` LPA, larger inside Tech and Finance). The honest "typical pay" number for a candidate is the **median**, not the mean — the mean is pulled up by a small number of high earners. Any salary report based on mean alone would systematically overstate what a typical worker earns.
+
+**2. Sectors cluster into a high-paying pair and a low-paying pair, with a steady middle.** The boxplots in 4.40 and the per-sector tables in 4.38 both surface the same ranking:
+
+| Tier | Sectors | Median salary | Spread (IQR) |
+|---|---|---:|---:|
+| High | Technology, Finance | ~14–15 LPA | wide (Finance widest at 12.0) |
+| Mid | Healthcare | ~9 LPA | tight (4.8) |
+| Low | Manufacturing, Retail | ~7–9 LPA | very tight (Retail at 2.3) |
+
+Importantly, **Finance has the widest spread**, not just a high median — the same level of role pays very differently within it.
+
+**3. Experience drives salary linearly, with a sector offset.** The scatter analysis in 4.42 fitted `salary = 0.86 × experience + 8.19`, Pearson `r = 0.75`. The colour-coded scatter showed the *same slope* across all five sectors — only the intercepts differ. The market-wide return on a year of experience is roughly universal; the sector decides where the line starts, not how steep it is.
+
+**4. Missingness is structured, not random.** The detection routine in 4.33 surfaced that `perks` was missing at ~70% in Manufacturing and Retail postings vs. only ~8% elsewhere, and that `benefits_score` was missing in 32 of the 33 rows where `perks` was missing — a near-perfect co-occurrence. A global mean-fill would have smeared this out; the per-sector median fill from 4.34 was the right call.
+
+**5. Outlier detection has limits, even when three rules agree.** The synthesis script in 4.43 ran IQR / z-score / residual rules side-by-side on a frame seeded with three known-outlier types. The univariate spikes (5/5) and bivariate over-paid juniors (3/3) were caught. But the bivariate **under-paid seniors were missed by all three rules (0/3)** — their salary alone looked normal for a junior, and the residual rule self-masked because the high-salary spikes inflated its noise floor. **Statistical detection is necessary but not sufficient; domain rules ("any senior earning under the bottom decile of senior pay") catch what statistics cannot.**
+
+### Assumptions
+
+**1. The project runs on synthetic data.** Every numeric column was generated from a chosen distribution: lognormal salary, Poisson applications, exponential commute, clipped normal interview score, uniform integer experience. The shapes are plausible and the parameters were tuned to be didactically clear, but **nothing was validated against a real labour-market source**. Statements about "salary distributions" in the insights above describe the synthetic frames, not the real Indian labour market.
+
+**2. Generator parameters were chosen for visibility, not empirical fit.** Sector premiums (Tech `+5`, Finance `+4`, Retail `−1`) were set so the per-sector boxplot and scatter would show clear separation. The lognormal `μ = 2.4, σ = 0.5` for salary makes the right-skew lesson land within 100–300 rows. Real-world calibration would change every number in the README.
+
+**3. The salary–experience relationship was assumed linear.** 4.42 fitted a line via `np.polyfit(deg=1)`. Real markets show plateaus (mid-level pay compression), kinks (senior promotion bumps), and non-linearities. The linear model is correct for the synthetic data but is an over-simplification of reality.
+
+**4. Five sectors are treated as a closed taxonomy.** The standardisation work in 4.36 maps every variant onto one of `{technology, finance, healthcare, retail, manufacturing}`. There is no `"other"` bucket and no long-tail handling. A real ingestion pipeline would need fuzzy matching plus an explicit unknown-sector category.
+
+**5. Outlier definitions are statistical, not contextual.** 4.43 used `1.5×IQR`, `3σ`, and `2σ residuals`. None of these know whether a `2 LPA` salary at `15 years` of experience is "wrong" (data error) or "right" (unpaid sabbatical, internship, sole trader). Outlier rules raise *flags*, not *judgments*.
+
+**6. Missing-value patterns were deliberately injected.** The structured missingness in 4.33 (sector-driven `perks`, correlated `benefits_score`) is a teaching device, not a finding from real data. The detection methods do work, but on this frame they were guaranteed to find what was put there.
+
+### Limitations
+
+**1. No real placement-outcome data.** The original research question — *"which skill combinations correlate with successful placement?"* — needs both employer-side postings and candidate-side outcomes. The current scripts only model the postings side; there is no `placed_within_90_days` column to correlate against. A real continuation would integrate a recruiter or institute outcomes feed.
+
+**2. Single-market scope.** All synthetic data is geography-free. Currency, regulatory differences, and city-level cost-of-living variations are absent. A real labour-market model would be parameterised by location at minimum.
+
+**3. No temporal modelling beyond visualisation.** 4.41 surfaces trends and anomalies via rolling means, but never decomposes seasonality, tests for stationarity, or forecasts. The temporal lessons are descriptive, not predictive.
+
+**4. The skill canonicalisation pipeline is sketched, not built.** The README's overview mentions Wilson confidence intervals and fuzzy skill matching as goals; the current scripts cover only the *cleaning* primitives (4.36) that such a pipeline would consume. The full skill-vocabulary management is out of scope for this sprint.
+
+**5. Visualisations are gitignored — the GitHub view shows descriptions, not charts.** `outputs/figures/*.png` is intentionally excluded so each contributor regenerates locally and the repo stays small. The trade-off is that a casual reader of the GitHub web UI cannot see the histograms, boxplots, line plots, scatter plots, or outlier figures without running the scripts.
+
+**6. No real-data validation of the synthetic generators.** Every distribution choice (lognormal salary, Poisson applications, exponential commute) is a *plausible* shape, not a *fitted* shape. Production work would calibrate each generator against a real distribution and report the goodness-of-fit before relying on the synthetic frames.
+
+**7. Tests are absent.** None of the 25 `src/*.py` scripts have unit tests. Each was verified by running it and visually inspecting the output, which is fine for teaching scripts but would not survive a production code review. A real continuation would add `pytest` cases for the helpers (e.g. `count_iqr_outliers`, `residual_outlier_mask`, `standardize_text`).
+
+### How to Use This Section
+
+| If you are… | Read |
+|---|---|
+| A reviewer with 5 minutes | the **Insights** bullets — what the work surfaced |
+| A reviewer evaluating rigour | the **Assumptions** section — the choices that shaped every later result |
+| A reviewer evaluating risk | the **Limitations** section — what the work cannot answer and where production work would diverge |
+| A teammate continuing the project | all three, then the per-assignment sections (4.29–4.43) for implementation detail |
+
+### Why This Matters
+
+A project that ships only code is auditable but not *evaluable*. Insights say what we found; assumptions say what we believed; limitations say what we did not, and could not, prove. Together they let a reviewer judge the work in proportion to its actual scope, instead of mistaking a teaching artefact for a production claim.
 
 ---
 
