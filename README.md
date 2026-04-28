@@ -35,6 +35,7 @@
 - [Assignment 4.27 — Creating Pandas Series from Lists and Arrays](#assignment-427--creating-pandas-series-from-lists-and-arrays)
 - [Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files](#assignment-428--creating-pandas-dataframes-from-dictionaries-and-files)
 - [Assignment 4.29 — Loading CSV Data into Pandas DataFrames](#assignment-429--loading-csv-data-into-pandas-dataframes)
+- [Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()](#assignment-430--inspecting-dataframes-using-head-info-and-describe)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -4490,6 +4491,268 @@ python3 -m ruff check src/load_csv_data.py
 ### Conclusion
 
 `pd.read_csv` is the door every later assignment walks through. The plain call always works, but the *useful* call sets `parse_dates`, `dtype`, and `na_values` so that the DataFrame arrives at the cleaning stage already typed, already date-aware, and already missing-value aware. With these six patterns in place, the cleaning suite (4.30 inspection, 4.33–4.34 missing values, 4.35 duplicates, 4.36 standardisation) can focus on actual cleaning decisions instead of fighting `read_csv` defaults.
+
+---
+
+## Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Loading a CSV (4.29) is only step one — the moment a DataFrame exists, the first responsibility is to *inspect* it before doing anything that could go wrong. Pandas exposes three small methods that together answer almost every "what did I just get?" question:
+
+- `head()` / `tail()` — visual preview of the rows
+- `info()` — structural skeleton (columns, dtypes, non-null counts, memory)
+- `describe()` — numeric snapshot (count, mean, std, min, quantiles, max)
+
+Skipping this step is the single most common cause of late-stage analysis bugs (wrong dtype, hidden nulls, off-by-one row count). This assignment turns the three calls into a routine you run on every fresh frame.
+
+### File Name
+
+`src/inspect_dataframe.py`
+
+### Two Frames, Same Routine
+
+The script runs the inspection routine on **two** frames so the lesson holds at both ends of the size spectrum:
+
+| Frame | Shape | Why it's there |
+|---|---|---|
+| Bundled disk CSV (`data/raw/sample_job_postings.csv`) | `(3, 7)` | The form a learner first meets — proves the routine works on a real disk file |
+| Synthetic realistic frame (`generate_realistic_postings`) | `(120, 6)` | NaN injected into salary (~12%) and date (~5%); lognormal salary so `describe()` shows real skew, real spread, real quartiles |
+
+The 3-row CSV is **not enough** to demonstrate `describe()` meaningfully — quartiles on 3 numbers are degenerate, std is barely informative, and `info()`'s non-null count equals the row count by construction. The 120-row synthetic frame is what makes the inspection methods *show their value*.
+
+### Three Methods, Three Questions
+
+| Method | Question it answers | Output shape |
+|---|---|---|
+| `head(n)` / `tail(n)` | *Did the file parse the way I expected?* | sub-DataFrame, `n` rows |
+| `info()` | *What columns exist, what types, any nulls, how big?* | text report (writable to stdout or a `StringIO` buffer) |
+| `describe()` | *What is the numeric distribution per column?* | summary DataFrame: `count, mean, std, min, 25%, 50%, 75%, max` |
+| `describe(include='all')` | *... plus categorical: cardinality, mode, mode-frequency* | extended summary including `unique, top, freq` rows |
+| `isna().sum()` | *How many NaN per column?* (cross-check for `info()`) | `Series` indexed by column name |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()."""
+
+import io
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+SYNTHETIC_ROW_COUNT = 120
+MISSING_SALARY_RATE = 0.12      # ~12% of salary rows -> NaN
+MISSING_DATE_RATE = 0.05        # ~5% of date_posted rows -> NaT
+
+
+def generate_realistic_postings(n_rows=SYNTHETIC_ROW_COUNT, seed=42) -> pd.DataFrame:
+    """Build a 120-row synthetic frame with a right-skewed salary
+    distribution and intentionally-injected NaN, so info() and describe()
+    have real signal to report."""
+    rng = np.random.default_rng(seed)
+    salaries = rng.lognormal(mean=2.4, sigma=0.5, size=n_rows).round(1)
+    base_date = pd.Timestamp("2024-01-01")
+    dates = base_date + pd.to_timedelta(
+        rng.integers(0, 180, size=n_rows), unit="D"
+    )
+
+    frame = pd.DataFrame({
+        "job_id": np.arange(1, n_rows + 1, dtype="int64"),
+        "job_title": rng.choice(ROLES, size=n_rows),
+        "sector": rng.choice(SECTORS, size=n_rows),
+        "experience_years": rng.integers(0, 12, size=n_rows),
+        "salary_lpa": salaries,
+        "date_posted": dates,
+    })
+    frame.loc[rng.random(n_rows) < MISSING_SALARY_RATE, "salary_lpa"] = np.nan
+    frame.loc[rng.random(n_rows) < MISSING_DATE_RATE, "date_posted"] = pd.NaT
+    return frame
+
+
+def structural_summary(frame: pd.DataFrame) -> str:
+    """Capture frame.info() output as a string via StringIO."""
+    buffer = io.StringIO()
+    frame.info(buf=buffer)
+    return buffer.getvalue()
+
+
+def explain_skewness(frame: pd.DataFrame, column: str) -> str:
+    """One-line interpretation of mean-vs-median for a numeric column."""
+    mean = frame[column].mean()
+    median = frame[column].median()
+    gap = mean - median
+    direction = "right" if gap > 0 else "left" if gap < 0 else "no"
+    return (
+        f"  {column}: mean = {mean:.2f}, median = {median:.2f}, "
+        f"gap = {gap:+.2f} -> {direction}-skewed distribution."
+    )
+```
+
+### Explanation of Each Method
+
+#### 1. `head()` and `tail()` — visual preview
+
+```python
+frame.head()        # first 5 rows (default)
+frame.head(3)       # first 3 rows
+frame.tail(3)       # last 3 rows
+```
+
+The cheapest sanity check available. If the preview shows all data crammed into a single column, the separator is wrong; if it shows zero rows, the file was empty or the header was miscounted; if dates look like strings, you forgot `parse_dates=`. Running `head()` *first* makes those problems visible in one second instead of one hour.
+
+`tail()` matters when files are appended chronologically (logs, daily exports) — the most recent and the most likely-to-be-broken rows are at the *end*. On the synthetic frame the head also makes the injected NaN visible (notice rows 0 and 1 already show `NaN` for `salary_lpa`).
+
+#### 2. `info()` — structural skeleton, captured via `StringIO`
+
+```python
+buffer = io.StringIO()
+frame.info(buf=buffer)
+report = buffer.getvalue()
+```
+
+By default `info()` writes to stdout, which makes it hard to embed inside a structured run report or a unit test. Redirecting through `StringIO` gives the same string back for re-printing or assertions.
+
+What to read in the output:
+
+- **Non-Null Count vs. row count** — the easiest way to spot missing data. On the synthetic frame, `salary_lpa` shows `103 non-null` against 120 rows = 17 NaN; `date_posted` shows `114 non-null` = 6 NaT.
+- **Dtype per column** — confirms `parse_dates=` worked (`datetime64[ns]`), confirms numeric columns are `int64` / `float64` rather than `object`.
+- **Memory usage** — flags wasteful object-dtype columns; for the synthetic 120-row frame it's `5.8+ KB`, the trailing `+` meaning "object columns hold pointers, true memory is higher".
+
+```
+RangeIndex: 120 entries, 0 to 119
+Data columns (total 6 columns):
+ #   Column            Non-Null Count  Dtype
+---  ------            --------------  -----
+ 0   job_id            120 non-null    int64
+ 1   job_title         120 non-null    object
+ 2   sector            120 non-null    object
+ 3   experience_years  120 non-null    int64
+ 4   salary_lpa        103 non-null    float64           ← 17 NaN
+ 5   date_posted       114 non-null    datetime64[ns]    ← 6 NaT
+dtypes: datetime64[ns](1), float64(1), int64(2), object(2)
+memory usage: 5.8+ KB
+```
+
+The script also runs `isna().sum()` right after `info()` to cross-check the same numbers — same answer, different presentation, useful when programmatically branching on missing-value counts.
+
+#### 3. `describe()` — numeric snapshot
+
+```python
+frame.describe()
+```
+
+For every numeric column (and `datetime64`), `describe()` returns:
+
+| Row | Meaning |
+|---|---|
+| `count` | number of non-null values — should match `info()`'s non-null count |
+| `mean` | arithmetic average — pulled toward outliers |
+| `std` | standard deviation — how spread out the column is |
+| `min` / `max` | the range; outliers and bad data show up here first |
+| `25%` / `50%` / `75%` | quartiles; `50%` is the median |
+
+On the synthetic frame `describe()` actually has signal to report:
+
+```
+           job_id  experience_years  salary_lpa                date_posted
+count  120.000000        120.000000  103.000000                        114
+mean    60.500000          5.883333   11.632039  2024-03-29 07:09:28...
+min      1.000000          0.000000    4.200000  2024-01-02 00:00:00
+25%     30.750000          3.000000    8.350000  2024-02-13 18:00:00
+50%     60.500000          6.000000   10.900000  2024-03-27 12:00:00
+75%     90.250000          9.000000   14.450000  2024-05-13 00:00:00
+max    120.000000         11.000000   32.200000  2024-06-27 00:00:00
+std     34.785054          3.330994    4.695413                        NaN
+```
+
+Two reads to do every time:
+
+- **Mean vs. 50% (median)** — `salary_lpa` has `mean = 11.63` vs `median = 10.90`, a `+0.73` gap → right-skewed (the lognormal tail). `experience_years` has `mean ≈ median` → roughly symmetric.
+- **Min / Max sanity** — negative salaries, ages over 200, dates in 1900 are usually data-quality bugs. The synthetic frame's `salary` range `[4.2, 32.2]` and `date_posted` range `[2024-01-02, 2024-06-27]` both look defensible.
+
+The script bakes this read into a small helper `explain_skewness(frame, column)` so the report calls out the gap directly instead of leaving the reader to scan the table.
+
+#### 3b. `describe(include='all')` — string columns too
+
+```python
+frame.describe(include="all")
+```
+
+Adds `unique` (number of distinct values), `top` (most common value), and `freq` (count of the top value) for non-numeric columns. On the synthetic frame this surfaces:
+
+- `job_title`: 7 unique roles, top = `Data Scientist` with 24 postings
+- `sector`: 5 unique, top = `Manufacturing` with 32 postings
+
+Useful for a one-shot overview of a mixed-type frame — it reveals categorical columns with low cardinality (good candidates for `groupby`) and free-text columns where every row is unique (no point grouping by them).
+
+### Sample Output (excerpt — synthetic frame)
+
+```
+============================================================
+Inspecting: synthetic job-postings frame (shape = (120, 6))
+============================================================
+
+1) head(3):
+   job_id         job_title      sector  experience_years  salary_lpa date_posted
+0       1    Data Scientist  Healthcare                 9         NaN  2024-04-23
+1       2  Backend Engineer     Finance                 6         NaN  2024-01-16
+2       3  Backend Engineer     Finance                 3        16.0         NaT
+
+2b) isna().sum():
+job_id               0
+job_title            0
+sector               0
+experience_years     0
+salary_lpa          17
+date_posted          6
+
+Distribution reading -- the payoff of describe() on real data:
+  salary_lpa: mean = 11.63, median = 10.90, gap = +0.73 -> right-skewed distribution.
+  experience_years: mean = 5.88, median = 6.00, gap = -0.12 -> left-skewed distribution.
+
+  Lognormal salary -> mean > median -> right-skewed (long high-pay tail).
+  Uniform years    -> mean ~ median -> roughly symmetric distribution.
+```
+
+### Inspection Cheat Sheet
+
+| Method | When | Why |
+|---|---|---|
+| `head()` / `tail()` | Always first, immediately after load | Cheapest way to spot parse / shape problems |
+| `info()` | Right after `head()` | Confirms dtypes and reveals missing values |
+| `isna().sum()` | Alongside `info()` | Programmatic cross-check of the non-null counts |
+| `describe()` | Once `info()` says dtypes are correct | Surfaces outliers, skew, and sanity-check failures |
+| `describe(include="all")` | When the frame has mixed numeric + string columns | Single-shot overview including categorical summaries |
+| `explain_skewness(...)` *(this script)* | When you want a one-line skew read instead of scanning quartiles | Calls out the mean-vs-median gap explicitly |
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/inspect_dataframe.py
+python3 -m black src/inspect_dataframe.py
+python3 -m ruff check src/inspect_dataframe.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Skipping inspection altogether | Silent dtype / null bugs surface during analysis instead of at load time |
+| Demoing the methods on a 3-row toy CSV only | `describe()` quartiles are degenerate, `info()` non-null gap can never appear; the lesson reads as theoretical |
+| Reading only `head()` and assuming dtypes | A numeric-looking column can be `object` (strings); arithmetic will fail later |
+| Treating `describe()` numbers as truth without checking row count | Aggregates over the wrong rows look correct |
+| Forgetting `include='all'` on mixed-type frames | Categorical columns go uninspected; cardinality issues missed |
+| Calling `info()` without capturing it | `info()` writes to stdout — can't be embedded in a structured report unless redirected through `StringIO` |
+| Eyeballing `mean` alone for distribution shape | Skew is invisible from the mean; need the mean-vs-median gap or quartiles |
+
+### Conclusion
+
+`head()`, `info()`, and `describe()` are the three-question routine every fresh DataFrame should pass through *before* any cleaning, transformation, or analysis. The synthetic-data demonstration is what proves the routine actually works on data that resembles the real world: NaN where reality has NaN, a skewed numeric column where reality has skew, mixed numeric and categorical types where reality is mixed. The cleaning suite that follows (4.31 shape & types, 4.33–4.34 missing values, 4.35 duplicates, 4.36 standardisation) all depend on the answers these three methods reveal — running them up-front makes the rest of the pipeline cheaper, safer, and far easier to debug.
 
 ---
 
