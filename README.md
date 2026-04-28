@@ -44,6 +44,11 @@
 - [Assignment 4.36 — Standardizing Column Names and Data Formats](#assignment-436--standardizing-column-names-and-data-formats)
 - [Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns](#assignment-437--computing-basic-summary-statistics-for-individual-columns)
 - [Assignment 4.38 — Comparing Distributions Across Multiple Columns](#assignment-438--comparing-distributions-across-multiple-columns)
+- [Assignment 4.39 — Visualizing Data Distributions Using Histograms](#assignment-439--visualizing-data-distributions-using-histograms)
+- [Assignment 4.40 — Visualizing Data Distributions Using Boxplots](#assignment-440--visualizing-data-distributions-using-boxplots)
+- [Assignment 4.41 — Identifying Trends Over Time Using Line Plots](#assignment-441--identifying-trends-over-time-using-line-plots)
+- [Assignment 4.42 — Exploring Relationships Between Variables Using Scatter Plots](#assignment-442--exploring-relationships-between-variables-using-scatter-plots)
+- [Assignment 4.43 — Detecting Outliers Using Visual Inspection and Simple Rules](#assignment-443--detecting-outliers-using-visual-inspection-and-simple-rules)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -6549,6 +6554,924 @@ python3 -m ruff check src/compare_distributions.py
 ### Conclusion
 
 Comparison is the step that turns "we computed some statistics" into "we found a story." Two questions matter — *across columns* (handled with CV / z-score) and *across groups within a column* (handled with `groupby` + per-group summary + MAD-based anomaly flag). Both report **centre and spread together**, and both prefer robust metrics (median, IQR, P95−P5, MAD) when the underlying distribution is skewed or heavy-tailed. Once these comparisons are routine, the visualisation work that follows (4.39 histograms, 4.40 boxplots, 4.42 scatter, 4.43 outlier detection) is mostly *picturing* what the numbers already said.
+
+---
+
+## Assignment 4.39 — Visualizing Data Distributions Using Histograms
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A histogram is the cheapest way to look at a distribution — bin the values, count what falls into each bin, draw a bar per bin. The shape of the resulting bars tells you what no summary statistic can: peaks, modes, gaps, asymmetry, the long tail you suspected existed. This assignment is the visual companion to 4.37 (per-column statistics) and 4.38 (cross-column comparison) — every claim those scripts made about distribution shape gets a picture here.
+
+### File Name
+
+`src/visualize_histograms.py`
+
+### Five Histogram Patterns Saved to `outputs/figures/`
+
+| # | File | What it shows |
+|---|---|---|
+| 1 | `salary_distribution_hist.png` | Single column, default `bins="auto"` — baseline |
+| 2 | `salary_bin_comparison_hist.png` | Same column at **5 / 30 / 80 bins** — bin count is itself an analytical choice |
+| 3 | `multi_column_distributions_hist.png` | 2×3 grid, one histogram per numeric column — five shapes at a glance |
+| 4 | `salary_per_sector_hist.png` | Translucent overlay, one colour per sector — the cross-group comparison from 4.38, drawn |
+| 5 | `salary_with_central_tendency_hist.png` | Histogram + `axvline` for mean and median — the mean-vs-median gap as visible offset |
+
+The PNGs are written to `outputs/figures/` which is `.gitignored`, so each contributor regenerates them locally by running the script.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.39 — Visualizing Data Distributions Using Histograms."""
+
+from __future__ import annotations
+from pathlib import Path
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def plot_single_histogram(series: pd.Series, title: str, path: Path) -> Path:
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.hist(series.dropna(), bins="auto", color="steelblue", edgecolor="white")
+    ax.set_title(title)
+    ax.set_xlabel(series.name)
+    ax.set_ylabel("Frequency")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_bin_comparison(series: pd.Series, path: Path) -> Path:
+    """Same data at three bin counts so the reader sees that bin count
+    is a choice, not a fact."""
+    fig, axes = plt.subplots(1, 3, figsize=(13, 4), sharey=True)
+    for ax, n_bins, label in zip(
+        axes,
+        (5, 30, 80),
+        ("Under-binned (5)", "Reasonable (30)", "Over-binned (80)"),
+    ):
+        ax.hist(series.dropna(), bins=n_bins, color="steelblue", edgecolor="white")
+        ax.set_title(label)
+        ax.set_xlabel(series.name)
+    axes[0].set_ylabel("Frequency")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_overlaid_per_group(
+    frame: pd.DataFrame, group_col: str, target_col: str, path: Path
+) -> Path:
+    """One histogram per group, overlaid with alpha=0.45 on the same axes."""
+    fig, ax = plt.subplots(figsize=(8, 5))
+    palette = ("#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd")
+    for color, group in zip(palette, sorted(frame[group_col].dropna().unique())):
+        ax.hist(
+            frame.loc[frame[group_col] == group, target_col].dropna(),
+            bins=24, alpha=0.45, label=group, color=color, edgecolor="white",
+        )
+    ax.set_title(f"{target_col} distribution per {group_col}")
+    ax.legend(title=group_col)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+
+
+def plot_with_central_tendency(series: pd.Series, path: Path) -> Path:
+    """Histogram + vertical lines for mean and median; the gap is the skew."""
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.hist(series.dropna(), bins=30, color="steelblue", edgecolor="white")
+    mean, median = float(series.mean()), float(series.median())
+    ax.axvline(mean, color="crimson", linestyle="--", linewidth=2,
+               label=f"mean = {mean:.2f}")
+    ax.axvline(median, color="darkorange", linestyle="-", linewidth=2,
+               label=f"median = {median:.2f}")
+    ax.set_title(f"{series.name} — mean vs median (gap = {mean - median:+.2f})")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+```
+
+### Explanation of Each Histogram
+
+#### 1. Single histogram with `bins="auto"`
+
+Matplotlib's `bins="auto"` picks between Sturges' formula and Freedman–Diaconis based on what looks reasonable for the data size and shape. On a 300-row right-skewed `salary_lpa`, it produces a tall block on the left and a thin tail on the right — the *visual* version of the lognormal mean-vs-median gap from 4.37.
+
+#### 2. Three bin counts, same data
+
+Bin count changes the *story*:
+
+- **5 bins** — hides the right tail. The whole distribution looks like one big lump.
+- **30 bins** — shows the peak and the tail together. The right place for this dataset.
+- **80 bins** — introduces spurious gaps from sample-size noise. The shape looks more "interesting" than it really is.
+
+The lesson: **bin count is an analytical decision**, not a default. `"auto"` is defensible; explicit values should match the data size.
+
+#### 3. 2×3 grid — five distribution shapes side-by-side
+
+The five different distribution types from 4.37 / 4.38 in one figure:
+
+- `salary_lpa` — right-skewed (lognormal)
+- `experience_years` — flat-ish uniform
+- `applications_received` — single peak around 8 (Poisson)
+- `interview_score` — bunches against the upper bound (clipped normal)
+- `commute_minutes` — heavy right tail (exponential)
+
+Same X axis style, same Y axis ("Frequency"), so the eye can compare shape directly without translating units.
+
+#### 4. Overlaid per-sector with transparency
+
+Five sectors plotted on the *same* X axis with `alpha=0.45`. The translucency is what makes the overlap readable. The picture tells the same story 4.38's table told:
+
+- **Retail / Manufacturing** concentrate at the lower end.
+- **Finance / Technology** peak higher and have visible right tails.
+- **Healthcare** sits between, narrower than Finance but wider than Retail.
+
+A picture is faster than the table for non-technical viewers, and the table is more precise for technical review — both belong in the report.
+
+#### 5. Histogram with annotated mean and median lines
+
+```python
+ax.axvline(mean,   linestyle="--", color="crimson",   label=f"mean = {mean:.2f}")
+ax.axvline(median, linestyle="-",  color="darkorange", label=f"median = {median:.2f}")
+```
+
+When the dashed mean line sits to the **right** of the solid median line, the distribution is right-skewed; on the left, left-skewed. On `salary_lpa` the gap is `+1.75` (mean = 11.80, median = 10.05) — visible at a glance and labelled in the legend.
+
+### Sample Output (excerpt)
+
+```
+1) Single histogram — default bin count
+   saved -> outputs/figures/salary_distribution_hist.png   (baseline single histogram)
+
+2) Bin-count comparison — same data, three views
+   saved -> outputs/figures/salary_bin_comparison_hist.png
+   Read: 5 bins hides the right tail; 30 bins shows the peak + tail;
+         80 bins introduces spurious gaps from sample-size noise.
+
+3) Multi-column grid — five distribution shapes at a glance
+   saved -> outputs/figures/multi_column_distributions_hist.png
+
+4) Overlaid per-sector — comparing distributions on one axis
+   saved -> outputs/figures/salary_per_sector_hist.png
+
+5) Single histogram + central-tendency reference lines
+   saved -> outputs/figures/salary_with_central_tendency_hist.png
+   Annotated values: mean = 11.80, median = 10.05, gap = +1.75.
+```
+
+### Histogram Cheat Sheet
+
+```
+ax.hist(series, bins="auto")              -> default histogram
+ax.hist(series, bins=N)                   -> explicit bin count
+ax.hist(series, bins=[edges])             -> explicit bin edges
+ax.hist(group_data, alpha=0.45, label=g)  -> overlay per group (call once per group)
+ax.axvline(mean, linestyle="--")          -> annotate a reference value
+fig, axes = plt.subplots(2, 3, ...)       -> grid for many columns
+fig.savefig(path, dpi=120); plt.close()   -> always close to free memory
+
+WHEN TO PREFER WHICH BIN COUNT
+  small N           -> 5-15 bins
+  medium-large N    -> "auto" or 20-40
+  huge N (millions) -> use a KDE or a 2-D heatmap, not a histogram
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/visualize_histograms.py
+ls outputs/figures/*.png
+```
+
+Outputs are gitignored — they regenerate cleanly on every run.
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Using `bins=10` everywhere | Hides important structure on small samples; introduces noise on large ones. `"auto"` is a better default |
+| Overlaying histograms without `alpha=` | Bars from one group hide the others entirely; the comparison is invisible |
+| Forgetting `plt.close(fig)` | Memory leak when generating many figures in a loop |
+| `plt.show()` instead of `fig.savefig()` | Blocks in scripts; non-headless |
+| Choosing bin count to make the chart "look nicer" | Cherry-picks the visual; pick a defensible default once and stick to it |
+| Not labelling axes / legend | Histogram becomes unreadable when extracted from context (slide decks, reports) |
+| Demoing on uniform data | The histogram is a flat rectangle — none of the lessons about peaks, skew, tails get to demonstrate |
+
+### Conclusion
+
+Histograms are the visual companion to summary statistics: every claim 4.37 / 4.38 made about distribution shape should be falsifiable by drawing the picture. The five patterns here cover the full reporting workflow — single column, bin sensitivity, multi-column overview, per-group overlay, central-tendency annotation. With these in place, the boxplot (4.40), line plot (4.41), scatter (4.42), and outlier-detection (4.43) work that follows is mostly a matter of swapping `ax.hist(...)` for `ax.boxplot / ax.plot / ax.scatter` and keeping the rest of the figure-construction skeleton.
+
+---
+
+## Assignment 4.40 — Visualizing Data Distributions Using Boxplots
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A boxplot is a histogram's older, more compact cousin. Where a histogram shows you *how* the values fall, a boxplot shows you *where* the quartiles sit and *which* points fall outside the typical spread — a 5-summary picture (`min within whiskers`, `Q1`, `median`, `Q3`, `max within whiskers`) plus the outlier dots.
+
+The killer feature is **side-by-side group comparison**: ten sectors fit on one axis as ten boxes; the same data drawn as ten overlaid histograms is unreadable. This script demonstrates that plus the standard **`1.5×IQR` outlier rule** that boxplots embed by default.
+
+### File Name
+
+`src/visualize_boxplots.py`
+
+### Five Boxplot Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `salary_boxplot.png` | Single-column 5-summary view |
+| 2 | `multi_column_z_boxplot.png` | Five columns z-scored so they share an axis — comparable spread across different units |
+| 3 | `salary_per_sector_boxplot.png` | One box per sector, sorted by median — the killer comparison |
+| 4 | `salary_outlier_count_boxplot.png` | Per-sector boxplot annotated with `1.5×IQR` outlier counts above each box |
+| 5 | `salary_boxplot_with_jitter.png` | Boxplot + jittered scatter overlay — the density the box hides |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.40 — Visualizing Data Distributions Using Boxplots."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+def count_iqr_outliers(values: pd.Series) -> int:
+    """Number of values outside [Q1 - 1.5*IQR, Q3 + 1.5*IQR]."""
+    q1, q3 = values.quantile(0.25), values.quantile(0.75)
+    iqr = q3 - q1
+    low, high = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    return int(((values < low) | (values > high)).sum())
+
+
+def plot_per_group_boxplot(frame, group_col, target_col, path):
+    """One box per group, sorted by median descending."""
+    grouped = frame.groupby(group_col, observed=True)[target_col].apply(
+        lambda s: s.dropna().to_numpy()
+    )
+    medians = {g: float(np.median(arr)) for g, arr in grouped.items()}
+    order = sorted(grouped.index, key=lambda g: -medians[g])
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.boxplot(
+        [grouped.loc[g] for g in order],
+        labels=order,
+        patch_artist=True,
+        boxprops={"facecolor": "lightsteelblue"},
+    )
+    ax.set_ylabel(target_col)
+    ax.set_xlabel(group_col)
+    ax.set_title(f"{target_col} per {group_col} — sorted by median (high first)")
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+    return path
+```
+
+### Explanation of Each Pattern
+
+#### 1. Single-column boxplot — the 5-summary view
+
+```
+median = 9.65, Q1 = 7.20, Q3 = 13.50, IQR = 6.30
+1.5*IQR outliers: 8 dots above the upper whisker.
+```
+
+A boxplot draws five horizontal lines (`min`, `Q1`, `median`, `Q3`, `max`) and bars for everything beyond `1.5×IQR` from the box. On a right-skewed `salary_lpa`, the upper whisker is short and outliers show up as dots above it — that's the visual fingerprint of skew.
+
+#### 2. Multi-column z-score boxplot — comparable spread across units
+
+```python
+z = frame[columns].apply(lambda s: (s - s.mean()) / s.std())
+ax.boxplot([z[c].dropna() for c in columns], labels=columns, ...)
+```
+
+Salary in LPA and commute in minutes can't share an axis directly. After `(x - mean) / std`, every column is on the same unit-free scale and the boxplot widths become honestly comparable. `commute_minutes`'s box towers over the others on the z-axis — the heavy-tail signature now visible at a glance.
+
+#### 3. Per-sector boxplot — comparing groups within one column
+
+```
+Per-sector salary medians (sorted high → low):
+  Technology      14.85   (n=64)
+  Finance         11.35   (n=54)
+  Healthcare       9.40   (n=49)
+  Manufacturing    8.30   (n=65)
+  Retail           7.70   (n=68)
+```
+
+This is the visualisation that makes the 4.38 per-sector table click. Five sectors, five boxes on one axis — the eye reads centre and spread together. Sorting by median descending is conventional and makes ranking obvious.
+
+#### 4. Per-sector boxplot with outlier-count annotations
+
+`ax.text(i, y_top * 1.04, f"out: {n_outliers}", ...)` writes the `1.5×IQR` count above each box:
+
+```
+Finance        -> 2 IQR outlier(s)
+Healthcare     -> 1 IQR outlier(s)
+Manufacturing  -> 0 IQR outlier(s)
+Retail         -> 3 IQR outlier(s)
+Technology     -> 2 IQR outlier(s)
+```
+
+Sectors with disproportionately many outliers either have heavy-tailed distributions or genuine data-quality issues worth investigating. Putting the count *on the chart* removes a round-trip to a separate table.
+
+#### 5. Boxplot + jittered points — what the box hides
+
+```python
+ax.boxplot(series, ...)
+jitter = rng.normal(loc=1.0, scale=0.06, size=len(series))
+ax.scatter(jitter, series, s=8, alpha=0.45)
+```
+
+The box collapses 300 rows into a 5-summary; the jitter shows the underlying density. Where points crowd, the distribution has a peak; where points thin, a gap. Use jitter when `n` is small enough that individual points are still meaningful (under a few thousand).
+
+### Histogram vs. Boxplot — Which to Use When
+
+| Question | Best chart |
+|---|---|
+| What does this distribution *look like*? (peaks, modes, gaps) | Histogram |
+| Compare 5+ groups or 5+ columns at once | Boxplot |
+| Spot outliers using a built-in rule | Boxplot |
+| Show *exact* density / sample size | Histogram + jittered scatter |
+| Quick comparable summary for a slide | Boxplot |
+
+### Boxplot Cheat Sheet
+
+```
+ax.boxplot(values)                           -> single box
+ax.boxplot([v1, v2, v3], labels=[...])       -> multi-box
+ax.boxplot(values, patch_artist=True,
+          boxprops={"facecolor": ...})       -> filled colour
+1.5*IQR rule                                 -> matplotlib's default whiskers
+count_iqr_outliers(series)                   -> numeric anomaly count
+jittered scatter on top                      -> density behind the box
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/visualize_boxplots.py
+ls outputs/figures/*box*.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Comparing raw boxplots across columns of different units | Visual spread is meaningless; z-score first |
+| Calling outliers "errors" automatically | They might be the most interesting data points; investigate before discarding |
+| Skipping per-group boxplots | Group-level differences invisible; back to overlapping histograms |
+| Forgetting `patch_artist=True` for `facecolor` | matplotlib silently ignores the colour kwarg without it |
+| Using a boxplot for a bimodal distribution | The box hides the second peak; show a histogram alongside |
+
+### Conclusion
+
+Boxplots compress a distribution into five numbers and a rule for outliers — that compression is what lets them compare ten groups on one axis where ten histograms become unreadable. With the histogram (4.39) and the boxplot (this one) in place, the toolkit covers both views every distribution analysis needs: shape detail and compact comparability.
+
+---
+
+## Assignment 4.41 — Identifying Trends Over Time Using Line Plots
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A line plot is the canonical chart for *ordered* data: x is time, y is the metric, the line connects consecutive points. The shape of the line is the **trend**; unusual peaks or dips are the **anomalies** that summary statistics by themselves would never have surfaced.
+
+### File Name
+
+`src/visualize_line_plots.py`
+
+### A Synthetic Stream with a Trend, a Cycle, and an Anomaly
+
+The script generates a 180-day synthetic posting stream where:
+
+- **Baseline volume** ramps slowly from ~8 → ~16 postings/day (visible **upward trend**).
+- **Weekend effect** scales the baseline by `0.55` (visible **weekly cycle**).
+- **Days 60–67** is an injected anomaly window where volume drops to `0.25 × baseline` (visible **anomaly**).
+
+All three are deliberate so the four line-plot patterns each get to demonstrate something.
+
+### Four Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `postings_daily_line.png` | Raw daily count + **7-day rolling mean** overlay — the canonical noise-vs-trend separation |
+| 2 | `postings_weekly_line.png` | `resample("W-MON")` aggregate — same data, smoother story |
+| 3 | `postings_per_sector_line.png` | Multi-line per sector with light rolling smoothing |
+| 4 | `postings_anomaly_line.png` | Daily count + ±2σ band; days >2 std from local mean highlighted in **red** |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.41 — Identifying Trends Over Time Using Line Plots."""
+
+from __future__ import annotations
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def daily_counts(frame: pd.DataFrame) -> pd.Series:
+    """Postings per calendar day, sorted by date."""
+    return (
+        frame.groupby(frame["date_posted"].dt.date)
+        .size()
+        .rename("postings")
+        .sort_index()
+    )
+
+
+def weekly_counts(frame: pd.DataFrame) -> pd.Series:
+    """Postings per ISO calendar week (Mon-anchored)."""
+    return frame.set_index("date_posted").resample("W-MON").size().rename("postings")
+
+
+def plot_daily_with_rolling(daily: pd.Series, path):
+    rolling = daily.rolling(window=7, min_periods=1).mean()
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(daily.index, daily.values, color="steelblue", linewidth=1.0,
+            label="Daily count (raw)")
+    ax.plot(rolling.index, rolling.values, color="crimson", linewidth=2.0,
+            label="7-day rolling mean")
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+    ax.legend()
+    fig.autofmt_xdate()
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+
+
+def plot_anomalies(daily: pd.Series, path):
+    """Centred 14-day rolling mean ± 2 std; flag days outside the band."""
+    rolling_mean = daily.rolling(window=14, min_periods=3, center=True).mean()
+    rolling_std = daily.rolling(window=14, min_periods=3, center=True).std()
+    deviation = (daily - rolling_mean).abs() / rolling_std.replace(0, np.nan)
+    anomalies = daily[deviation > 2]
+
+    fig, ax = plt.subplots(figsize=(10, 4.5))
+    ax.plot(daily.index, daily.values, color="steelblue", linewidth=1.0)
+    ax.plot(rolling_mean.index, rolling_mean.values, color="grey",
+            linewidth=1.5, linestyle="--", label="14-day centred mean")
+    ax.fill_between(rolling_mean.index,
+                    rolling_mean - 2 * rolling_std,
+                    rolling_mean + 2 * rolling_std,
+                    color="grey", alpha=0.15, label="±2 std band")
+    ax.scatter(anomalies.index, anomalies.values, color="crimson",
+               s=40, zorder=5,
+               label=f"Anomaly (>2 std): {len(anomalies)} day(s)")
+    ax.legend()
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+```
+
+### Explanation of Each Pattern
+
+#### 1. Daily count + 7-day rolling mean
+
+Raw daily volume is jittery from weekend dips and Poisson noise. The 7-day rolling mean strips out the weekly cycle and exposes the slow upward trend across the 6-month window — a classic **noise-vs-trend** separation.
+
+```
+Daily mean: 10.1 postings/day, std: 3.7
+```
+
+#### 2. Weekly aggregate
+
+`resample("W-MON")` collapses the daily series into weekly buckets. The weekend effect disappears entirely (it's now folded into each weekly sum) and the trend becomes the dominant signal.
+
+```
+Weekly mean: 68 postings/week, min: 9, max: 106
+```
+
+The dramatic min (9 postings) corresponds to the seeded anomaly week — visible at this granularity as a single dropped point on the line.
+
+#### 3. Per-sector multi-line
+
+```python
+for sector in per_sector.columns:
+    smooth = per_sector[sector].rolling(window=7, min_periods=1).mean()
+    ax.plot(smooth.index, smooth.values, label=sector)
+```
+
+Five sectors, five lines on one axis with light rolling smoothing so the lines are readable. Per-sector totals over the window:
+
+```
+Finance         375
+Manufacturing   374
+Technology      373
+Healthcare      367
+Retail          359
+```
+
+Roughly even allocation by construction, so the comparison is about *temporal pattern*, not total volume.
+
+#### 4. Anomaly highlight via ±2σ band
+
+```python
+rolling_mean = daily.rolling(window=14, center=True).mean()
+rolling_std = daily.rolling(window=14, center=True).std()
+deviation = (daily - rolling_mean).abs() / rolling_std
+anomalies = daily[deviation > 2]
+```
+
+A centred rolling mean with a `±2σ` band makes the "normal" range visible. Days where the count falls outside the band are flagged in red. The script's seeded anomaly window (days 60–67) drops to ~25% of baseline — depending on where the centred window straddles the dip, 2-3 days end up flagged.
+
+### Time-Axis Formatting
+
+```python
+ax.xaxis.set_major_locator(mdates.MonthLocator())
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %Y"))
+fig.autofmt_xdate()
+```
+
+This trio is what makes a date axis readable instead of overlapping unreadable labels. Always pair `MonthLocator` (or `WeekdayLocator`, `YearLocator`) with a matching `DateFormatter`, and call `fig.autofmt_xdate()` to rotate.
+
+### Line-Plot Cheat Sheet
+
+```
+ax.plot(x, y)                                -> basic line
+series.rolling(window=7).mean()              -> 7-day noise reduction
+series.resample("W-MON").sum()               -> change time granularity
+ax.fill_between(x, low, high, alpha=0.2)     -> tolerance band
+mdates.MonthLocator() + DateFormatter("%b %Y") -> readable date axis
+fig.autofmt_xdate()                          -> rotate ticks
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/visualize_line_plots.py
+ls outputs/figures/postings_*line.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Plotting a line on unsorted data | Zigzag mess; the "trend" is just sort order |
+| Using daily granularity when the question is "monthly trend" | Cycle noise dominates; resample first |
+| Overlaying 20 lines | Visual chaos; use a small-multiples grid or pick the top 5 |
+| No date locator/formatter | Tick labels overlap and become unreadable |
+| Anomaly detection without a *centred* rolling window | Anomalies near the edges are missed (window goes off-end) |
+| Demoing on data without a real trend or anomaly | The line plot is flat noise; nothing to discuss |
+
+### Conclusion
+
+Histograms (4.39) and boxplots (4.40) describe a static distribution; line plots describe how that distribution evolves. Three views — daily, weekly, per-sector — combined with a `±2σ` anomaly band cover the full set of trend-spotting questions a 180-day stream can answer. With these in place the visualisation toolkit is ready for the relationship view (scatter, 4.42) and the unified outlier story (4.43).
+
+---
+
+## Assignment 4.42 — Exploring Relationships Between Variables Using Scatter Plots
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A scatter plot is the right chart for the question *"do these two columns move together?"* — one observation per point, x and y positions reflecting two variables, the cloud's shape telling you the relationship's **direction**, **strength**, and any **outliers**.
+
+### File Name
+
+`src/visualize_scatter.py`
+
+### Why a Synthetic Frame with a Real Correlation
+
+A scatter on uncorrelated random columns is just a square cloud — there's nothing to find. The script generates a 250-row frame where:
+
+```
+salary = 6.0 + 0.90 × experience + sector_premium + noise
+```
+
+with sector premiums Tech `+5.0`, Finance `+4.0`, Healthcare `+1.5`, Manufacturing `0.0`, Retail `-1.0`. So the scatter has a **real positive trend**, **parallel sector bands**, and **realistic noise** — the four scatter patterns each get to demonstrate something real.
+
+### Four Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `experience_salary_scatter.png` | Basic two-variable scatter — the cloud |
+| 2 | `experience_salary_per_sector_scatter.png` | Same scatter colour-coded by sector — parallel bands |
+| 3 | `experience_salary_with_trendline_scatter.png` | Least-squares line + Pearson `r` in the legend |
+| 4 | `experience_salary_outliers_scatter.png` | Points >2σ off the trend line highlighted in red |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.42 — Scatter plots for relationships between variables."""
+
+from __future__ import annotations
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def fit_linear_trend(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float]:
+    """Return (slope, intercept, pearson_r) for a least-squares line."""
+    slope, intercept = np.polyfit(x, y, deg=1)
+    r = float(np.corrcoef(x, y)[0, 1])
+    return float(slope), float(intercept), r
+
+
+def residual_outliers(
+    x: pd.Series, y: pd.Series, slope: float, intercept: float, threshold: float = 2.0
+) -> pd.Series:
+    """True for points whose residual is > threshold std from the regression line.
+
+    Relationship-aware analogue of the boxplot's 1.5*IQR rule -- 'unusual
+    GIVEN the predictor', not just 'unusual on its own'.
+    """
+    residuals = y - (slope * x + intercept)
+    std = residuals.std()
+    return residuals.abs() / std > threshold
+
+
+def plot_per_sector_scatter(frame, path):
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    palette = {
+        "Technology": "#1f77b4", "Finance": "#ff7f0e", "Healthcare": "#2ca02c",
+        "Manufacturing": "#d62728", "Retail": "#9467bd",
+    }
+    for sector, color in palette.items():
+        sub = frame[frame["sector"] == sector]
+        ax.scatter(sub["experience_years"], sub["salary_lpa"],
+                   s=24, alpha=0.6, color=color, edgecolor="white",
+                   label=f"{sector} (n={len(sub)})")
+    ax.legend(title="sector", loc="upper left", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+```
+
+### Explanation of Each Pattern
+
+#### 1. Basic scatter — the relationship at a glance
+
+`ax.scatter(experience_years, salary_lpa, s=22, alpha=0.55)` produces an upward-sloping cloud. The width of the cloud is the noise — if it were a thin line, salary would be a deterministic function of experience.
+
+#### 2. Per-sector colour coding — parallel bands
+
+```
+Per-sector mean salary (highest → lowest):
+  Technology     16.06
+  Finance        15.45
+  Healthcare     12.82
+  Manufacturing  11.28
+  Retail         10.31
+```
+
+Each sector forms its own colour-coded band running diagonally up the chart. The **slope is the same** across sectors (experience → salary effect is universal); the **vertical offsets differ** (sector premium). That's the kind of structural insight a single-colour scatter would hide.
+
+#### 3. Trend line + Pearson `r`
+
+```python
+slope, intercept = np.polyfit(x, y, deg=1)
+r = np.corrcoef(x, y)[0, 1]
+```
+
+For this frame: `y = 0.86x + 8.19`, **`r = 0.75`** (strong positive correlation). The fitted slope `0.86` matches the generator's `0.90` ± noise, confirming the linear model is right for this relationship.
+
+| `r` | Interpretation |
+|---:|---|
+| ≈ 1 | Perfect positive linear |
+| ≈ 0.7–0.9 | Strong positive |
+| ≈ 0.3–0.7 | Moderate |
+| ≈ 0 | No linear relationship (could still be non-linear!) |
+| ≈ −0.7 | Strong negative |
+
+**Always pair `r` with the picture.** A high `r` on a non-linear cloud is misleading; Anscombe's quartet is the canonical reminder.
+
+#### 4. Residual outliers — unusual *given* the predictor
+
+```python
+residual = y - (slope * x + intercept)
+flagged = residual.abs() / residual.std() > 2.0
+```
+
+11 residual outliers flagged on this frame. These are points whose `salary_lpa` is unusual *given their `experience_years`* — they would look perfectly normal on a single-variable boxplot of salary alone, because the unusual-ness is **conditional on the predictor**.
+
+This is the relationship-aware analogue of the boxplot's `1.5×IQR` rule from 4.40, and it's the right tool when you want to find "underpaid for their experience" or "overpaid for their experience" cases — bivariate outliers that univariate detection cannot see.
+
+### When Scatter, When Other Plot?
+
+| Question | Right plot |
+|---|---|
+| Two numeric variables, do they move together? | **Scatter** |
+| One numeric, one time | Line plot (4.41) |
+| One numeric, one categorical | Boxplot per group (4.40) |
+| Single distribution shape detail | Histogram (4.39) |
+| 3+ numeric variables at once | Pair plot, or scatter coloured by 3rd |
+
+### Scatter Cheat Sheet
+
+```
+ax.scatter(x, y, s=22, alpha=0.55)             -> basic scatter
+ax.scatter(..., c=group_codes, cmap="viridis") -> colour by group
+np.polyfit(x, y, deg=1)                        -> least-squares line
+np.corrcoef(x, y)[0, 1]                        -> Pearson r
+residual = y - (slope*x + intercept)           -> per-point error
+residual.abs() / residual.std() > 2            -> 2-std outlier rule
+
+CAUTION
+  correlation != causation
+  r assumes a *linear* relationship; inspect the cloud first
+  alpha < 1 prevents heavy overplotting
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt
+python3 src/visualize_scatter.py
+ls outputs/figures/experience_salary_*.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Reporting only Pearson `r` without the picture | Non-linear relationships look weak even when they're real |
+| `alpha=1.0` on a 1000-point scatter | Heavy overplotting; the cloud becomes one solid blob |
+| Inferring causation from correlation | Confounders (here: sector) explain a chunk of the relationship — the colour-coded version makes that visible |
+| Using a single-variable rule for relationship outliers | Underpaid-for-experience cases stay invisible |
+| Plotting raw scatter with no axis labels | Charts in slide decks become unreadable |
+| Demoing on uncorrelated random data | The scatter is a square cloud; no relationship to discuss |
+
+### Conclusion
+
+Scatter plots are the canonical first chart for any *bivariate* numeric question. With histograms (4.39), boxplots (4.40), line plots (4.41), and now scatter, the visual EDA toolkit covers shape, comparison, time, and relationship. The residual-outlier helper here also feeds directly into the unified outlier story in 4.43.
+
+---
+
+## Assignment 4.43 — Detecting Outliers Using Visual Inspection and Simple Rules
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+This is the synthesis assignment for the visualisation tranche. Histograms (4.39) showed shape, boxplots (4.40) embedded the `1.5×IQR` rule, line plots (4.41) flagged temporal anomalies, scatter plots (4.42) introduced residual outliers. Each said "outlier" while meaning *something different*. This script puts the three numeric definitions side-by-side on one frame, with **three distinct kinds of outliers seeded on purpose**, and reports which method catches which.
+
+### File Name
+
+`src/detect_outliers.py`
+
+### Three Methods, Three Definitions
+
+| Method | Rule | Strength | Weakness |
+|---|---|---|---|
+| **IQR** | `|x − median| > 1.5 × IQR` | Robust against heavy tails (median + IQR don't move with outliers) | Univariate only |
+| **Z-score** | `|(x − mean) / std| > 3` | Classical, fast | Mean and std *are* pulled by outliers — outliers can self-mask |
+| **Residual** | `|y − ŷ| / σ_resid > 2` from regression of `y` on `x` | Catches "unusual *given* the predictor" | Requires a model fit; the fit itself can be distorted by other outliers |
+
+### Three Outlier Types Seeded into the 200-Row Frame
+
+| Type | Count | What it looks like |
+|---|---:|---|
+| `univariate_spike` | 5 | Salaries 45–60 LPA at any experience level — pure spikes |
+| `bivariate_underpaid` | 3 | Senior engineers (≥10 yrs) paid 3–6 LPA — salary alone looks fine |
+| `bivariate_overpaid` | 3 | Junior engineers (≤2 yrs) paid 28–38 LPA — salary alone borderline |
+
+### Five Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `outliers_iqr_boxplot.png` | IQR rule visualised on the salary boxplot |
+| 2 | `outliers_zscore_lollipop.png` | Z-score lollipop with `±3σ` reference lines |
+| 3 | `outliers_residual_scatter.png` | Residual rule on the experience–salary scatter |
+| 4 | `outliers_method_comparison_scatter.png` | Same scatter colour-coded by which method(s) flagged each row |
+| 5 | `outliers_overlap_heatmap.png` | Method-by-method overlap matrix |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.43 — Detecting Outliers: visual inspection + simple rules."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def iqr_outlier_mask(values: pd.Series, multiplier: float = 1.5) -> pd.Series:
+    q1, q3 = values.quantile(0.25), values.quantile(0.75)
+    iqr = q3 - q1
+    return (values < q1 - multiplier * iqr) | (values > q3 + multiplier * iqr)
+
+
+def zscore_outlier_mask(values: pd.Series, threshold: float = 3.0) -> pd.Series:
+    std = values.std()
+    if std == 0:
+        return pd.Series(False, index=values.index)
+    return ((values - values.mean()) / std).abs() > threshold
+
+
+def residual_outlier_mask(
+    x: pd.Series, y: pd.Series, threshold: float = 2.0
+) -> pd.Series:
+    slope, intercept = np.polyfit(x.to_numpy(dtype=float), y.to_numpy(dtype=float), 1)
+    residuals = y - (slope * x + intercept)
+    std = residuals.std()
+    return residuals.abs() / std > threshold if std > 0 else pd.Series(
+        False, index=x.index
+    )
+```
+
+### What the Run Actually Reports
+
+```
+Per-seeded-truth detection — which method caught what:
+
+                     n_total  iqr  zscore  residual
+truth
+bivariate_overpaid         3    3       0         3
+bivariate_underpaid        3    0       0         0     ← all methods missed!
+typical                  189    0       0         0     ← no false positives
+univariate_spike           5    5       5         5
+
+Overlap matrix (rows flagged by both methods):
+          iqr  zscore  residual
+iqr         8       5         8
+zscore      5       5         5
+residual    8       5         8
+```
+
+**Real lessons that fall out of this output:**
+
+1. **All three methods hit `univariate_spike` (5/5).** The 45–60 LPA spikes are extreme on every axis — that's the easy case.
+2. **IQR and Residual catch `bivariate_overpaid` (3/3).** A junior at 30 LPA is an IQR outlier on the salary column AND a residual outlier vs. the regression line — caught twice for two different reasons.
+3. **Z-score misses `bivariate_overpaid`.** Mean and std are inflated by the 5 univariate spikes; the overpaid juniors at 30-38 LPA aren't 3σ above the inflated mean.
+4. **All three methods MISS `bivariate_underpaid` (0/3).** This is the most important teaching moment of the whole tranche:
+   - IQR/Z-score on salary alone: 3-6 LPA looks normal because juniors *do* earn that much.
+   - Residual rule: should have caught these (a senior at 4 LPA has a huge negative residual), but the high-salary spikes elsewhere inflated the residual standard deviation so much that the underpaid cases didn't cross the 2σ threshold. **The detector self-masks** when many outliers are present.
+
+The conclusion: **outlier detection has limits, and combining methods doesn't always cover all cases.** Domain-specific rules (e.g. "any senior earning under the bottom decile of senior pay") often catch what statistical rules can't.
+
+### When To Use Which Rule
+
+| Situation | Right rule |
+|---|---|
+| Skewed univariate column | **IQR** (Z-score is pulled by tails) |
+| Roughly normal univariate column | **Z-score** is fine |
+| Two related variables | **Residual rule** |
+| Time series | Rolling mean ±2σ (4.41) |
+| Many outliers expected | Use a **robust regression** (e.g. Huber) before residuals |
+| Domain knowledge exists | Always pair statistical rules with a domain-specific filter |
+
+### Outlier Cheat Sheet
+
+```
+iqr_outlier_mask(values, 1.5)        -> boxplot rule, robust
+zscore_outlier_mask(values, 3.0)     -> classical, sensitive
+residual_outlier_mask(x, y, 2.0)     -> bivariate, GIVEN-x
+
+RULES OF THUMB
+  1. Outliers depend on the question being asked.
+  2. Detection != deletion -- investigate before removing.
+  3. No single rule catches everything; combine with domain rules.
+  4. Visual inspection + numeric rule, never one alone.
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt
+python3 src/detect_outliers.py
+ls outputs/figures/outliers_*.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Trusting one rule to find all outliers | This script's `bivariate_underpaid` cases evade all three numeric rules |
+| Reporting "outliers" without saying which definition | "We removed outliers" is ambiguous — IQR? Z-score? Residual? |
+| Removing rows because a rule flagged them | The rule could be wrong; investigate before deleting |
+| Z-score on heavy-tailed data | Outliers inflate std and self-mask; use IQR instead |
+| Residual rule on a fit polluted by other outliers | The fit shifts; underpaid cases get hidden (this script's example) |
+| Demoing on data without seeded outliers | The detection methods all return zero; nothing to compare |
+
+### Conclusion
+
+The visualisation tranche (4.39–4.43) ends here. Each chart has its statistical companion: histogram + summary stats; boxplot + IQR rule; line plot + rolling-mean band; scatter + Pearson `r` + residual rule. This synthesis script is the proof that **definition matters** — three numeric rules, three different sets of flagged rows, and one set of seeded outliers that all three missed entirely. The take-away that closes the tranche: pair every numeric rule with the picture, and every picture with domain context.
 
 ---
 
