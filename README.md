@@ -34,6 +34,9 @@
 - [Assignment 4.26 — Understanding NumPy Broadcasting with Simple Examples](#assignment-426--understanding-numpy-broadcasting-with-simple-examples)
 - [Assignment 4.27 — Creating Pandas Series from Lists and Arrays](#assignment-427--creating-pandas-series-from-lists-and-arrays)
 - [Assignment 4.28 — Creating Pandas DataFrames from Dictionaries and Files](#assignment-428--creating-pandas-dataframes-from-dictionaries-and-files)
+- [Assignment 4.29 — Loading CSV Data into Pandas DataFrames](#assignment-429--loading-csv-data-into-pandas-dataframes)
+- [Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()](#assignment-430--inspecting-dataframes-using-head-info-and-describe)
+- [Assignment 4.31 — Understanding Data Shapes and Column Data Types](#assignment-431--understanding-data-shapes-and-column-data-types)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -4274,6 +4277,760 @@ python3 -m ruff check src/pandas_dataframes.py
 ### Conclusion
 
 The DataFrame is where everything the sprint has built so far converges: NumPy arrays (4.22) provide the numeric substrate, `shape` / `ndim` / `dtype` (4.23) describe each column's layout, element-wise math and broadcasting (4.24–4.26) still work under the hood, vectorisation (4.25) still beats any Python loop, and Pandas Series (4.27) are the columns themselves. With the four construction patterns here — dict-of-lists, list-of-dicts, dict-of-Series, and `read_csv` — the project now has every ingredient it needs to load the real `data/raw/*.csv` files, hand them to Harshita's cleaning pipeline (4.29–4.38), and eventually surface the cleaned frames to the visualisation stage (4.39–4.43).
+
+---
+
+## Assignment 4.29 — Loading CSV Data into Pandas DataFrames
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Where 4.28 demonstrated *constructing* a DataFrame from in-memory objects, this assignment focuses on the most common real-world entry point for a data project: reading a CSV file from disk into a DataFrame. Every later cleaning, analysis, and visualisation step starts from a frame produced by `pd.read_csv`, so understanding its arguments — `parse_dates`, `dtype`, `na_values`, `usecols`, `index_col`, `sep` — is what determines whether the rest of the pipeline gets clean, typed, analysis-ready data or a frame full of strings and "NaN" surprises.
+
+### File Name
+
+`src/load_csv_data.py`
+
+### Six Loading Patterns
+
+| # | Pattern | Key arguments | What it produces |
+|---|---|---|---|
+| 1 | Plain load | _(none)_ | Pandas infers everything; date columns stay as `object` strings |
+| 2 | Date-aware | `parse_dates=[...]` | Date column becomes `datetime64[ns]`, unlocking `.dt` accessor |
+| 3 | Explicit dtype | `dtype={...}, na_values=[...]` | String columns get `string` dtype; `'-'` and `'n/a'` become `NaN` |
+| 4 | Subset + index | `usecols=[...], index_col=...` | Skips columns you don't need; promotes a column to the row index |
+| 5 | In-memory buffer | `StringIO(text), sep=';'` | Reads any character-delimited data without writing a file |
+| 6 | Safe load | `try / except FileNotFoundError` | Returns an empty frame instead of crashing |
+
+### Full Python Script
+
+```python
+"""Assignment 4.29 — Loading CSV Data into Pandas DataFrames."""
+
+from io import StringIO
+from pathlib import Path
+
+import pandas as pd
+
+SAMPLE_CSV_PATH = (
+    Path(__file__).resolve().parent.parent / "data" / "raw" / "sample_job_postings.csv"
+)
+
+SEMICOLON_CSV = """skill;mentions;notes
+python;12;
+sql;9;-
+excel;4;low-volume
+"""
+
+
+def load_plain(path: Path) -> pd.DataFrame:
+    """Baseline: let Pandas infer everything from the file."""
+    return pd.read_csv(path)
+
+
+def load_with_dates(path: Path) -> pd.DataFrame:
+    """Parse the date column into datetime64 instead of object."""
+    return pd.read_csv(path, parse_dates=["date_posted"])
+
+
+def load_with_explicit_types(path: Path) -> pd.DataFrame:
+    """Force string dtype on text columns and treat '-' as missing."""
+    return pd.read_csv(
+        path,
+        dtype={"job_title": "string", "company": "string", "sector": "string"},
+        na_values=["-", "n/a", "NA"],
+    )
+
+
+def load_subset(path: Path) -> pd.DataFrame:
+    """Read only the columns we need and use job_id as the row index."""
+    return pd.read_csv(
+        path,
+        usecols=["job_id", "job_title", "sector", "salary_lpa"],
+        index_col="job_id",
+    )
+
+
+def load_from_buffer(text: str) -> pd.DataFrame:
+    """Read a non-default-separator CSV from an in-memory string."""
+    return pd.read_csv(StringIO(text), sep=";", na_values=[""])
+
+
+def load_safely(path: Path) -> pd.DataFrame:
+    """Return an empty frame if the file is missing instead of crashing."""
+    try:
+        return pd.read_csv(path)
+    except FileNotFoundError:
+        return pd.DataFrame()
+```
+
+### Explanation of Each Pattern
+
+#### 1. Plain load — the baseline
+
+```python
+pd.read_csv("data/raw/sample_job_postings.csv")
+```
+
+The minimal call: Pandas opens the file, treats the first row as the header, parses each subsequent row, and infers a dtype per column. Numeric-looking columns become `int64` or `float64`; everything else (including dates) becomes `object` — Python strings boxed inside the column. This is the *always-works* form, but the inferred dtypes are rarely the dtypes you actually want for analysis.
+
+#### 2. Date-aware load — `parse_dates`
+
+```python
+pd.read_csv(path, parse_dates=["date_posted"])
+```
+
+Telling `read_csv` which columns are dates flips them from `object` to `datetime64[ns]` at load time. That single flag unlocks the entire `.dt` accessor (`series.dt.year`, `series.dt.month`, `series.dt.dayofweek`) and lets you sort, filter, and group by date arithmetic instead of string comparison. The `dtypes` output makes the difference visible:
+
+```
+plain['date_posted'].dtype       -> object
+with_dates['date_posted'].dtype  -> datetime64[ns]
+```
+
+#### 3. Explicit dtype + na_values — fix inference up front
+
+```python
+pd.read_csv(
+    path,
+    dtype={"job_title": "string", "company": "string", "sector": "string"},
+    na_values=["-", "n/a", "NA"],
+)
+```
+
+Two corrections happening at once:
+
+- **`dtype=`** forces specific columns to a specific Pandas dtype. Replacing the generic `object` with `string` enables vectorised string methods (`series.str.lower()`) and uses less memory.
+- **`na_values=`** treats listed sentinels as missing data. Real datasets use `'-'`, `'n/a'`, `'NA'`, `'NULL'`, `'?'` interchangeably — passing them all here means downstream code only has to check for `NaN`, not for every spelling of "missing".
+
+Doing this at load time is preferable to fixing it later: you can never recover information that was already silently coerced to a string.
+
+#### 4. Column subset + row index — `usecols` and `index_col`
+
+```python
+pd.read_csv(
+    path,
+    usecols=["job_id", "job_title", "sector", "salary_lpa"],
+    index_col="job_id",
+)
+```
+
+- **`usecols=`** parses only the listed columns — important for wide CSVs (50+ columns) where you don't want to pay the parsing cost or carry unused memory.
+- **`index_col=`** promotes one column to the row index. The frame then loses that column from the body and gains label-based access via `.loc[<job_id>]`. On the bundled sample this turns shape `(3, 7)` into shape `(3, 3)` indexed by `job_id`.
+
+#### 5. In-memory buffer — `StringIO` + custom separator
+
+```python
+csv_text = "skill;mentions;notes\npython;12;\nsql;9;-\nexcel;4;low-volume\n"
+pd.read_csv(StringIO(csv_text), sep=";", na_values=[""])
+```
+
+`read_csv` accepts any *file-like* object, not just paths. Wrapping a string in `StringIO` lets you parse CSV-shaped data that came from an API response, a clipboard paste, or a unit-test fixture without touching disk. The same call also demonstrates `sep=`, which generalises `read_csv` to TSVs (`sep="\t"`), pipe-delimited files (`sep="|"`), and the European semicolon-CSV convention shown here.
+
+#### 6. Safe load — survive a missing file
+
+```python
+def load_safely(path: Path) -> pd.DataFrame:
+    try:
+        return pd.read_csv(path)
+    except FileNotFoundError:
+        return pd.DataFrame()
+```
+
+A missing input file should not crash the pipeline at the top of `main()`. Wrapping the call in a `try/except` and returning an empty DataFrame lets the rest of the script branch on `frame.empty` and produce a clear "no data" report instead of a stack trace. This is the pattern the cleaning notebooks (4.30–4.36) will use whenever an intermediate processed file might not exist yet.
+
+### Sample Output (excerpt)
+
+```
+1) Plain load — pd.read_csv(path):
+   job_id       job_title    company      sector ... date_posted  salary_lpa
+0       1  Data Scientist  Acme Corp  Technology ...  2024-01-15        12.0
+  dtypes:  date_posted     object        # ← string, not a date
+
+2) Date-aware load — parse_dates=['date_posted']:
+  dtypes:  date_posted     datetime64[ns]  # ← now a real date
+
+4) Column subset + index — usecols=[...], index_col='job_id':
+             job_title      sector  salary_lpa
+job_id
+1       Data Scientist  Technology        12.0
+2          ML Engineer  Technology        18.0
+3         Data Analyst     Finance         7.0
+  shape : (3, 3)         # ← was (3, 7) in the plain load
+
+5) In-memory buffer with sep=';':
+    skill  mentions       notes
+0  python        12         NaN   # ← empty string became NaN
+1     sql         9           -
+2   excel         4  low-volume
+
+6) Safe load — missing file returns an empty frame, no crash:
+  (empty frame)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/load_csv_data.py
+python3 -m black src/load_csv_data.py
+python3 -m ruff check src/load_csv_data.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Skipping `parse_dates=` and parsing dates by hand later with `pd.to_datetime` | Two passes over the same data; easy to forget on one of the columns |
+| Letting `dtype` infer everything | Mixed-type columns silently become `object`, losing memory and string-method ergonomics |
+| Treating `'-'`, `'n/a'`, `''` as valid values | Downstream `dropna` / `fillna` won't catch them; correlations skewed by sentinel rows |
+| Reading the whole file when you need 4 columns | Wastes memory and parse time; `usecols=` is one line |
+| Assuming `sep=','` always | European CSVs and tool exports often use `;` — explicit `sep=` is safer |
+| Letting a missing file crash the pipeline | One `try/except FileNotFoundError` keeps batch jobs running on the rest of the inputs |
+
+### Conclusion
+
+`pd.read_csv` is the door every later assignment walks through. The plain call always works, but the *useful* call sets `parse_dates`, `dtype`, and `na_values` so that the DataFrame arrives at the cleaning stage already typed, already date-aware, and already missing-value aware. With these six patterns in place, the cleaning suite (4.30 inspection, 4.33–4.34 missing values, 4.35 duplicates, 4.36 standardisation) can focus on actual cleaning decisions instead of fighting `read_csv` defaults.
+
+---
+
+## Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Loading a CSV (4.29) is only step one — the moment a DataFrame exists, the first responsibility is to *inspect* it before doing anything that could go wrong. Pandas exposes three small methods that together answer almost every "what did I just get?" question:
+
+- `head()` / `tail()` — visual preview of the rows
+- `info()` — structural skeleton (columns, dtypes, non-null counts, memory)
+- `describe()` — numeric snapshot (count, mean, std, min, quantiles, max)
+
+Skipping this step is the single most common cause of late-stage analysis bugs (wrong dtype, hidden nulls, off-by-one row count). This assignment turns the three calls into a routine you run on every fresh frame.
+
+### File Name
+
+`src/inspect_dataframe.py`
+
+### Two Frames, Same Routine
+
+The script runs the inspection routine on **two** frames so the lesson holds at both ends of the size spectrum:
+
+| Frame | Shape | Why it's there |
+|---|---|---|
+| Bundled disk CSV (`data/raw/sample_job_postings.csv`) | `(3, 7)` | The form a learner first meets — proves the routine works on a real disk file |
+| Synthetic realistic frame (`generate_realistic_postings`) | `(120, 6)` | NaN injected into salary (~12%) and date (~5%); lognormal salary so `describe()` shows real skew, real spread, real quartiles |
+
+The 3-row CSV is **not enough** to demonstrate `describe()` meaningfully — quartiles on 3 numbers are degenerate, std is barely informative, and `info()`'s non-null count equals the row count by construction. The 120-row synthetic frame is what makes the inspection methods *show their value*.
+
+### Three Methods, Three Questions
+
+| Method | Question it answers | Output shape |
+|---|---|---|
+| `head(n)` / `tail(n)` | *Did the file parse the way I expected?* | sub-DataFrame, `n` rows |
+| `info()` | *What columns exist, what types, any nulls, how big?* | text report (writable to stdout or a `StringIO` buffer) |
+| `describe()` | *What is the numeric distribution per column?* | summary DataFrame: `count, mean, std, min, 25%, 50%, 75%, max` |
+| `describe(include='all')` | *... plus categorical: cardinality, mode, mode-frequency* | extended summary including `unique, top, freq` rows |
+| `isna().sum()` | *How many NaN per column?* (cross-check for `info()`) | `Series` indexed by column name |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()."""
+
+import io
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+SYNTHETIC_ROW_COUNT = 120
+MISSING_SALARY_RATE = 0.12      # ~12% of salary rows -> NaN
+MISSING_DATE_RATE = 0.05        # ~5% of date_posted rows -> NaT
+
+
+def generate_realistic_postings(n_rows=SYNTHETIC_ROW_COUNT, seed=42) -> pd.DataFrame:
+    """Build a 120-row synthetic frame with a right-skewed salary
+    distribution and intentionally-injected NaN, so info() and describe()
+    have real signal to report."""
+    rng = np.random.default_rng(seed)
+    salaries = rng.lognormal(mean=2.4, sigma=0.5, size=n_rows).round(1)
+    base_date = pd.Timestamp("2024-01-01")
+    dates = base_date + pd.to_timedelta(
+        rng.integers(0, 180, size=n_rows), unit="D"
+    )
+
+    frame = pd.DataFrame({
+        "job_id": np.arange(1, n_rows + 1, dtype="int64"),
+        "job_title": rng.choice(ROLES, size=n_rows),
+        "sector": rng.choice(SECTORS, size=n_rows),
+        "experience_years": rng.integers(0, 12, size=n_rows),
+        "salary_lpa": salaries,
+        "date_posted": dates,
+    })
+    frame.loc[rng.random(n_rows) < MISSING_SALARY_RATE, "salary_lpa"] = np.nan
+    frame.loc[rng.random(n_rows) < MISSING_DATE_RATE, "date_posted"] = pd.NaT
+    return frame
+
+
+def structural_summary(frame: pd.DataFrame) -> str:
+    """Capture frame.info() output as a string via StringIO."""
+    buffer = io.StringIO()
+    frame.info(buf=buffer)
+    return buffer.getvalue()
+
+
+def explain_skewness(frame: pd.DataFrame, column: str) -> str:
+    """One-line interpretation of mean-vs-median for a numeric column."""
+    mean = frame[column].mean()
+    median = frame[column].median()
+    gap = mean - median
+    direction = "right" if gap > 0 else "left" if gap < 0 else "no"
+    return (
+        f"  {column}: mean = {mean:.2f}, median = {median:.2f}, "
+        f"gap = {gap:+.2f} -> {direction}-skewed distribution."
+    )
+```
+
+### Explanation of Each Method
+
+#### 1. `head()` and `tail()` — visual preview
+
+```python
+frame.head()        # first 5 rows (default)
+frame.head(3)       # first 3 rows
+frame.tail(3)       # last 3 rows
+```
+
+The cheapest sanity check available. If the preview shows all data crammed into a single column, the separator is wrong; if it shows zero rows, the file was empty or the header was miscounted; if dates look like strings, you forgot `parse_dates=`. Running `head()` *first* makes those problems visible in one second instead of one hour.
+
+`tail()` matters when files are appended chronologically (logs, daily exports) — the most recent and the most likely-to-be-broken rows are at the *end*. On the synthetic frame the head also makes the injected NaN visible (notice rows 0 and 1 already show `NaN` for `salary_lpa`).
+
+#### 2. `info()` — structural skeleton, captured via `StringIO`
+
+```python
+buffer = io.StringIO()
+frame.info(buf=buffer)
+report = buffer.getvalue()
+```
+
+By default `info()` writes to stdout, which makes it hard to embed inside a structured run report or a unit test. Redirecting through `StringIO` gives the same string back for re-printing or assertions.
+
+What to read in the output:
+
+- **Non-Null Count vs. row count** — the easiest way to spot missing data. On the synthetic frame, `salary_lpa` shows `103 non-null` against 120 rows = 17 NaN; `date_posted` shows `114 non-null` = 6 NaT.
+- **Dtype per column** — confirms `parse_dates=` worked (`datetime64[ns]`), confirms numeric columns are `int64` / `float64` rather than `object`.
+- **Memory usage** — flags wasteful object-dtype columns; for the synthetic 120-row frame it's `5.8+ KB`, the trailing `+` meaning "object columns hold pointers, true memory is higher".
+
+```
+RangeIndex: 120 entries, 0 to 119
+Data columns (total 6 columns):
+ #   Column            Non-Null Count  Dtype
+---  ------            --------------  -----
+ 0   job_id            120 non-null    int64
+ 1   job_title         120 non-null    object
+ 2   sector            120 non-null    object
+ 3   experience_years  120 non-null    int64
+ 4   salary_lpa        103 non-null    float64           ← 17 NaN
+ 5   date_posted       114 non-null    datetime64[ns]    ← 6 NaT
+dtypes: datetime64[ns](1), float64(1), int64(2), object(2)
+memory usage: 5.8+ KB
+```
+
+The script also runs `isna().sum()` right after `info()` to cross-check the same numbers — same answer, different presentation, useful when programmatically branching on missing-value counts.
+
+#### 3. `describe()` — numeric snapshot
+
+```python
+frame.describe()
+```
+
+For every numeric column (and `datetime64`), `describe()` returns:
+
+| Row | Meaning |
+|---|---|
+| `count` | number of non-null values — should match `info()`'s non-null count |
+| `mean` | arithmetic average — pulled toward outliers |
+| `std` | standard deviation — how spread out the column is |
+| `min` / `max` | the range; outliers and bad data show up here first |
+| `25%` / `50%` / `75%` | quartiles; `50%` is the median |
+
+On the synthetic frame `describe()` actually has signal to report:
+
+```
+           job_id  experience_years  salary_lpa                date_posted
+count  120.000000        120.000000  103.000000                        114
+mean    60.500000          5.883333   11.632039  2024-03-29 07:09:28...
+min      1.000000          0.000000    4.200000  2024-01-02 00:00:00
+25%     30.750000          3.000000    8.350000  2024-02-13 18:00:00
+50%     60.500000          6.000000   10.900000  2024-03-27 12:00:00
+75%     90.250000          9.000000   14.450000  2024-05-13 00:00:00
+max    120.000000         11.000000   32.200000  2024-06-27 00:00:00
+std     34.785054          3.330994    4.695413                        NaN
+```
+
+Two reads to do every time:
+
+- **Mean vs. 50% (median)** — `salary_lpa` has `mean = 11.63` vs `median = 10.90`, a `+0.73` gap → right-skewed (the lognormal tail). `experience_years` has `mean ≈ median` → roughly symmetric.
+- **Min / Max sanity** — negative salaries, ages over 200, dates in 1900 are usually data-quality bugs. The synthetic frame's `salary` range `[4.2, 32.2]` and `date_posted` range `[2024-01-02, 2024-06-27]` both look defensible.
+
+The script bakes this read into a small helper `explain_skewness(frame, column)` so the report calls out the gap directly instead of leaving the reader to scan the table.
+
+#### 3b. `describe(include='all')` — string columns too
+
+```python
+frame.describe(include="all")
+```
+
+Adds `unique` (number of distinct values), `top` (most common value), and `freq` (count of the top value) for non-numeric columns. On the synthetic frame this surfaces:
+
+- `job_title`: 7 unique roles, top = `Data Scientist` with 24 postings
+- `sector`: 5 unique, top = `Manufacturing` with 32 postings
+
+Useful for a one-shot overview of a mixed-type frame — it reveals categorical columns with low cardinality (good candidates for `groupby`) and free-text columns where every row is unique (no point grouping by them).
+
+### Sample Output (excerpt — synthetic frame)
+
+```
+============================================================
+Inspecting: synthetic job-postings frame (shape = (120, 6))
+============================================================
+
+1) head(3):
+   job_id         job_title      sector  experience_years  salary_lpa date_posted
+0       1    Data Scientist  Healthcare                 9         NaN  2024-04-23
+1       2  Backend Engineer     Finance                 6         NaN  2024-01-16
+2       3  Backend Engineer     Finance                 3        16.0         NaT
+
+2b) isna().sum():
+job_id               0
+job_title            0
+sector               0
+experience_years     0
+salary_lpa          17
+date_posted          6
+
+Distribution reading -- the payoff of describe() on real data:
+  salary_lpa: mean = 11.63, median = 10.90, gap = +0.73 -> right-skewed distribution.
+  experience_years: mean = 5.88, median = 6.00, gap = -0.12 -> left-skewed distribution.
+
+  Lognormal salary -> mean > median -> right-skewed (long high-pay tail).
+  Uniform years    -> mean ~ median -> roughly symmetric distribution.
+```
+
+### Inspection Cheat Sheet
+
+| Method | When | Why |
+|---|---|---|
+| `head()` / `tail()` | Always first, immediately after load | Cheapest way to spot parse / shape problems |
+| `info()` | Right after `head()` | Confirms dtypes and reveals missing values |
+| `isna().sum()` | Alongside `info()` | Programmatic cross-check of the non-null counts |
+| `describe()` | Once `info()` says dtypes are correct | Surfaces outliers, skew, and sanity-check failures |
+| `describe(include="all")` | When the frame has mixed numeric + string columns | Single-shot overview including categorical summaries |
+| `explain_skewness(...)` *(this script)* | When you want a one-line skew read instead of scanning quartiles | Calls out the mean-vs-median gap explicitly |
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/inspect_dataframe.py
+python3 -m black src/inspect_dataframe.py
+python3 -m ruff check src/inspect_dataframe.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Skipping inspection altogether | Silent dtype / null bugs surface during analysis instead of at load time |
+| Demoing the methods on a 3-row toy CSV only | `describe()` quartiles are degenerate, `info()` non-null gap can never appear; the lesson reads as theoretical |
+| Reading only `head()` and assuming dtypes | A numeric-looking column can be `object` (strings); arithmetic will fail later |
+| Treating `describe()` numbers as truth without checking row count | Aggregates over the wrong rows look correct |
+| Forgetting `include='all'` on mixed-type frames | Categorical columns go uninspected; cardinality issues missed |
+| Calling `info()` without capturing it | `info()` writes to stdout — can't be embedded in a structured report unless redirected through `StringIO` |
+| Eyeballing `mean` alone for distribution shape | Skew is invisible from the mean; need the mean-vs-median gap or quartiles |
+
+### Conclusion
+
+`head()`, `info()`, and `describe()` are the three-question routine every fresh DataFrame should pass through *before* any cleaning, transformation, or analysis. The synthetic-data demonstration is what proves the routine actually works on data that resembles the real world: NaN where reality has NaN, a skewed numeric column where reality has skew, mixed numeric and categorical types where reality is mixed. The cleaning suite that follows (4.31 shape & types, 4.33–4.34 missing values, 4.35 duplicates, 4.36 standardisation) all depend on the answers these three methods reveal — running them up-front makes the rest of the pipeline cheaper, safer, and far easier to debug.
+
+---
+
+## Assignment 4.31 — Understanding Data Shapes and Column Data Types
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+After loading a CSV (4.29) and running the inspection routine (4.30), the next questions every fresh DataFrame needs to answer are: *what is the actual shape of this thing, and are the column types what I expected?* These two questions decide whether your next operation will work or silently corrupt the analysis. The two failure modes this assignment is designed to expose:
+
+1. **Wrong assumptions about size** — off-by-one rows, dropped header, accidentally-wide-or-narrow frame.
+2. **Wrong assumptions about types** — numeric-looking columns that are actually strings, where arithmetic *concatenates* instead of adding (a silent disaster).
+
+### File Name
+
+`src/dataframe_shape_types.py`
+
+### Why a Tidy Frame Alone Isn't Enough
+
+The bundled `sample_job_postings.csv` is already tidy — every column dtype is what it should be, so it doesn't *demonstrate* a type problem. To make the lesson real, the script defines a deliberately-broken `MESSY_POSTINGS_CSV` constant containing the kind of input you actually receive from a hand-edited spreadsheet:
+
+| Column | Broken because | Stored as |
+|---|---|---|
+| `salary_lpa` | Currency prefix `$`, missingness as `-` / `n/a` | `object` (strings) |
+| `is_remote` | Mixed-case `Yes` / `no` / `YES` / `NO` | `object` |
+| `date_posted` | No `parse_dates=` argument | `object` |
+| `experience_years` | Stray `"unknown"` mixed with integers | `object` |
+
+Loaded without any type coercion, this is what `dtypes` reveals — and that revelation is the whole point of the assignment.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.31 — Understanding Data Shapes and Column Data Types."""
+
+import io
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+# Deliberately-broken CSV captured as a string for the type-issue demo.
+MESSY_POSTINGS_CSV = """job_id,job_title,sector,salary_lpa,is_remote,date_posted,experience_years
+1,Data Scientist,Technology,"$12.5",Yes,2024-01-15,3
+2,ML Engineer,Technology,"$18.0",no,2024-02-10,5
+3,Data Analyst,Finance,"-",YES,2024-01-20,2
+4,Backend Engineer,Finance,"$15.0",No,2024-03-05,unknown
+...
+"""
+
+
+def shape_report(frame: pd.DataFrame) -> str:
+    """Multi-line shape report covering shape / ndim / size / len."""
+    rows, cols = frame.shape
+    return (
+        f"  frame.shape -> {frame.shape}   ({rows} rows x {cols} columns)\n"
+        f"  frame.ndim  -> {frame.ndim}   (a DataFrame is always 2-D)\n"
+        f"  frame.size  -> {frame.size}   (rows * columns = total cell count)\n"
+        f"  len(frame)  -> {len(frame)}   (row count, same as frame.shape[0])"
+    )
+
+
+def detect_type_issues(frame: pd.DataFrame) -> list[str]:
+    """Heuristic: flag object-dtype columns whose values mostly parse as numeric."""
+    warnings = []
+    for column in frame.columns:
+        series = frame[column]
+        if pd.api.types.is_object_dtype(series.dtype):
+            sample = series.dropna().astype(str).head(20)
+            numeric_ok = pd.to_numeric(
+                sample.str.replace("$", "", regex=False).replace(
+                    {"-": np.nan, "n/a": np.nan}
+                ),
+                errors="coerce",
+            ).notna()
+            if numeric_ok.mean() > 0.6:
+                warnings.append(
+                    f"  '{column}' is dtype=object but {numeric_ok.mean():.0%} "
+                    f"of sampled values parse as numeric -> use pd.to_numeric()."
+                )
+    return warnings
+
+
+def repair_messy_postings(messy: pd.DataFrame) -> pd.DataFrame:
+    """Apply the canonical type-repair recipe to the messy frame."""
+    fixed = messy.copy()
+    fixed["salary_lpa"] = (
+        fixed["salary_lpa"]
+        .astype("string")
+        .str.replace("$", "", regex=False)
+        .replace({"-": pd.NA, "n/a": pd.NA, "NA": pd.NA})
+    )
+    fixed["salary_lpa"] = pd.to_numeric(fixed["salary_lpa"], errors="coerce")
+
+    truthy = {"yes", "y", "true", "1"}
+    fixed["is_remote"] = (
+        fixed["is_remote"]
+        .astype("string").str.strip().str.lower()
+        .map(lambda v: True if v in truthy else False if v else pd.NA)
+        .astype("boolean")
+    )
+
+    fixed["date_posted"] = pd.to_datetime(fixed["date_posted"], errors="coerce")
+    fixed["experience_years"] = (
+        pd.to_numeric(fixed["experience_years"], errors="coerce").astype("Int64")
+    )
+    return fixed
+```
+
+### Explanation of Each Part
+
+#### 1. Shape attributes — how big is the frame?
+
+```python
+frame.shape   # (rows, columns) tuple
+frame.ndim    # 2 for any DataFrame
+frame.size    # rows * columns (total cell count)
+len(frame)    # row count, same as frame.shape[0]
+```
+
+`shape` is the answer to *"how big is this?"* in two integers — the number of observations and the number of attributes. `ndim` is always `2` for a DataFrame (it's `1` for a Series, `0` for a scalar) — useful in functions that handle both. `size` is `rows × columns` and is what a memory-budget calculation starts from.
+
+#### 2. Rows = observations, Columns = attributes
+
+The "tidy data" convention: each row is one observation (here, one job posting), and each column is one attribute of that observation (`job_title`, `sector`, `salary_lpa`, …). When the shape is `(120, 6)` you are looking at 120 postings × 6 attributes.
+
+This convention is what makes Pandas operations read naturally:
+
+```python
+postings[postings["sector"] == "Finance"]                    # filter rows
+postings.groupby("sector").agg({"salary_lpa": "mean"})       # aggregate columns
+```
+
+If your frame has rows-as-attributes and columns-as-observations (a "wide" frame), the same operations no longer make sense — `melt()` / `pivot()` are how you flip between layouts.
+
+#### 3. Column dtypes — what type did Pandas infer?
+
+```python
+frame.dtypes
+```
+
+The dtype vector is the *truth* of what Pandas thinks each column contains. The dtypes you'll meet most often:
+
+| Dtype | What it holds | NaN support |
+|---|---|---|
+| `int64` | integers | no (use `Int64` for nullable) |
+| `float64` | real numbers, also home of `NaN` | yes (built in) |
+| `bool` | True / False | no (use `boolean` for nullable) |
+| `object` | Python strings — or anything heterogeneous | yes |
+| `datetime64[ns]` | timestamps; gives you the `.dt` accessor | yes (`NaT`) |
+| `category` | low-cardinality strings, memory-efficient | yes |
+
+The danger is `object`: it's the dtype Pandas falls back to when it can't figure out anything better, so it's also where mistakes hide.
+
+#### 4. Type-issue detection — which columns are lying?
+
+The script's `detect_type_issues()` walks the frame and applies one heuristic: *if a column's dtype is `object` but more than 60% of its non-null values parse as numeric, the column is really numeric*. On the messy frame this fires on:
+
+```
+'salary_lpa' is dtype=object but 83% of sampled values parse as numeric
+              -> use pd.to_numeric().
+'experience_years' is dtype=object but 86% of sampled values parse as numeric
+              -> use pd.to_numeric().
+```
+
+What goes wrong if you don't fix these:
+
+```python
+messy["salary_lpa"].sum()   # -> '$12.5$18.0-$15.0n/a$20.0$22.5'
+                            # string concatenation, not arithmetic.
+```
+
+That output is the textbook silent-disaster: no error, no warning, just nonsense in your aggregates.
+
+#### 5. The repair recipe — `to_numeric` / `to_datetime` / `astype`
+
+Once the issues are detected, the fix is a small set of canonical Pandas calls:
+
+```python
+# salary: strip "$", treat sentinels as NaN, then coerce to float.
+fixed["salary_lpa"] = (
+    messy["salary_lpa"]
+    .astype("string")
+    .str.replace("$", "", regex=False)
+    .replace({"-": pd.NA, "n/a": pd.NA})
+)
+fixed["salary_lpa"] = pd.to_numeric(fixed["salary_lpa"], errors="coerce")
+
+# date: explicit parse to datetime64[ns].
+fixed["date_posted"] = pd.to_datetime(messy["date_posted"], errors="coerce")
+
+# experience_years: coerce mixed string/int to nullable Int64.
+fixed["experience_years"] = pd.to_numeric(
+    messy["experience_years"], errors="coerce"
+).astype("Int64")
+
+# is_remote: yes/no/YES/no -> nullable boolean.
+fixed["is_remote"] = (
+    messy["is_remote"].astype("string").str.lower()
+    .map({"yes": True, "no": False}).astype("boolean")
+)
+```
+
+`errors="coerce"` is the workhorse: anything that can't be parsed becomes `NaN` instead of raising, so the cleaning step is deterministic. The nullable types (`Int64`, `boolean`, `string`) are the modern Pandas dtypes that *carry* `NaN` properly — unlike `int64` and `bool` which can't.
+
+### Sample Output (excerpt)
+
+```
+1) Shape attributes — how big is the frame?
+Tidy bundled CSV:
+  frame.shape -> (3, 7)   (3 rows x 7 columns)
+  frame.ndim  -> 2        (a DataFrame is always 2-D)
+  frame.size  -> 21       (rows * columns = total cell count)
+
+3) Column dtypes — Messy frame:
+          column  dtype                                                            hint
+          job_id  int64
+       job_title object
+          sector object
+      salary_lpa object  <-- numeric-sounding column stored as object (probably strings)
+       is_remote object  <-- yes/no flag stored as object (consider bool / category)
+     date_posted object  <-- date-sounding column not parsed (use pd.to_datetime)
+experience_years object  <-- numeric-sounding column stored as object (probably strings)
+
+5) Repair recipe — same column, before and after — salary_lpa:
+  before (object/strings)  after  (float64, NaN where bad)
+0                   $12.5                             12.5
+1                   $18.0                             18.0
+2                       -                             <NA>
+3                   $15.0                             15.0
+4                     n/a                             <NA>
+5                   $20.0                             20.0
+6                   $22.5                             22.5
+
+   fixed['salary_lpa'].sum()  -> 88.00    (real arithmetic, NaN ignored)
+   fixed['salary_lpa'].mean() -> 17.60
+```
+
+### Cheat Sheet — Shape and Types
+
+```
+frame.shape         -> (rows, columns) tuple
+frame.ndim          -> 2 for any DataFrame
+frame.size          -> rows * columns
+frame.dtypes        -> per-column type vector
+pd.to_numeric(s, errors="coerce")  -> strings -> numbers, bad -> NaN
+pd.to_datetime(s, errors="coerce") -> strings -> timestamps, bad -> NaT
+.astype("Int64")    -> nullable integer (keeps NaN, unlike int64)
+.astype("boolean")  -> nullable boolean (keeps NaN, unlike bool)
+.astype("category") -> compact dtype for low-cardinality strings
+.astype("string")   -> proper string dtype (over generic object)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/dataframe_shape_types.py
+python3 -m black src/dataframe_shape_types.py
+python3 -m ruff check src/dataframe_shape_types.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Trusting that `dtype=object` columns are strings only | Mixed numeric-and-string columns silently break aggregations |
+| Calling `.sum()` on a salary column without checking dtype | String concatenation (`'$12.5$18.0...'`) instead of arithmetic |
+| Using `int64` when missing values exist | `int64` cannot hold NaN; the column is silently coerced to `float64` |
+| Comparing dtypes with `dtype == object` | Style-incorrect; prefer `pd.api.types.is_object_dtype(dtype)` |
+| Skipping `errors="coerce"` on `to_numeric` | One bad cell raises `ValueError` and the whole column fails |
+| Demoing only on a tidy CSV | The lesson never *encounters* a type problem and reads as theoretical |
+
+### Conclusion
+
+Shape and types are the blueprint of the dataset — every later cleaning, joining, modelling, or visualisation operation depends on getting them right. Running `frame.shape` and `frame.dtypes` immediately after `frame.head()` (4.30) takes ten seconds and prevents the most common class of silent analysis bugs. The tidy-vs-messy contrast in this assignment makes both the diagnostic step and the repair recipe concrete: you can see the lie in the dtype vector and you can see the arithmetic light up after the repair.
 
 ---
 

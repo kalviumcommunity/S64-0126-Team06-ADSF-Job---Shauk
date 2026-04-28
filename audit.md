@@ -15,9 +15,9 @@
 | 4.2 | [LM] Understanding the Data Science Lifecycle: Question → Data → Insight | `Not Started` | — | |
 | 4.3 | [LM] Reading & Interpreting a Sample Data Science Project Repository | `Not Started` | — | |
 | 4.4 | Building the Project Plan & MVP Definition for the Data Science Sprint | `Not Started` | — | |
-| 4.29 | Loading CSV Data into Pandas DataFrames | `Not Started` | — | |
-| 4.30 | Inspecting DataFrames Using head(), info(), and describe() | `Not Started` | — | |
-| 4.31 | Understanding Data Shapes and Column Data Types | `Not Started` | — | |
+| 4.29 | Loading CSV Data into Pandas DataFrames | `Done` | 2026-04-28 | Bhargav — `src/load_csv_data.py`: 6 load patterns (plain, `parse_dates`, explicit `dtype`+`na_values`, `usecols`+`index_col`, `StringIO` with `sep=';'`, safe `try/except FileNotFoundError`); dtype-before/after contrast on `date_posted` (object → datetime64[ns]); black + ruff clean |
+| 4.30 | Inspecting DataFrames Using head(), info(), and describe() | `Done` | 2026-04-28 | Bhargav — `src/inspect_dataframe.py`: runs the inspection routine on **two** frames — the 3-row bundled CSV and a `generate_realistic_postings(120)` synthetic frame with lognormal salary and ~12% NaN injected — so `info()` actually shows non-null gaps (103/120, 114/120) and `describe()` actually shows real spread + skew (salary mean 11.63 vs median 10.90, std 4.69, range 4.2–32.2); includes `head` / `tail`, `info()` captured via `io.StringIO`, `isna().sum()` cross-check, `describe(include='all')` for categoricals, and an `explain_skewness()` helper that prints the mean-vs-median gap as a one-line read; black + ruff clean |
+| 4.31 | Understanding Data Shapes and Column Data Types | `Done` | 2026-04-28 | Bhargav — `src/dataframe_shape_types.py`: tidy-vs-messy contrast — loads the bundled CSV plus a deliberately-broken `MESSY_POSTINGS_CSV` (currency-prefixed salaries, mixed-case yes/no, unparsed dates, "unknown" mixed in `experience_years`); covers `shape` / `ndim` / `size` / `len`, the rows-as-observations convention, the full Pandas dtype taxonomy, a `detect_type_issues()` heuristic that flags object columns where >60% of values parse numeric (fires on `salary_lpa` 83%, `experience_years` 86%), and a complete `repair_messy_postings()` recipe using `pd.to_numeric` / `pd.to_datetime` / `.astype('Int64')` / `.astype('boolean')`; arithmetic before/after the repair shown explicitly (string concat → 88.00 sum, 17.60 mean); black + ruff clean |
 | 4.32 | Selecting Rows and Columns Using Indexing and Slicing | `Not Started` | — | |
 | 4.33 | Detecting Missing Values in DataFrames | `Not Started` | — | |
 | 4.34 | Handling Missing Values Using Drop and Fill Strategies | `Not Started` | — | |
@@ -74,10 +74,10 @@
 |---|---:|---:|---:|---:|
 | Harshita Soni ★ (on leave) | 0 | 0 | 0 | 0 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe (incl. analyst cover) | 10 | 0 | 19 | 29 |
-| **Overall** | **20** | **0** | **24** | **44** |
+| Bhargav Kalambhe (incl. analyst cover) | 13 | 0 | 16 | 29 |
+| **Overall** | **23** | **0** | **21** | **44** |
 
-Done: **20 / 44** (~45%)
+Done: **23 / 44** (~52%)
 
 ---
 
@@ -124,6 +124,9 @@ Done: **20 / 44** (~45%)
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.28: `src/pandas_dataframes.py` — four DataFrame construction patterns (dict-of-lists → columns, list-of-dicts → rows with `NaN` for missing keys, dict-of-Series → typed columns with index alignment, `pd.read_csv` on `data/raw/sample_job_postings.csv`), shape/columns/index/dtypes inspection, column and row selection, and confirmation that `frame.values` is an `np.ndarray` closing the 4.22 → 4.28 arc; black + ruff clean |
 | 2026-04-28 | Bhargav Kalambhe | Ownership update: Harshita on leave from 2026-04-28; her 15 tasks (4.1–4.4, 4.29–4.38, 4.44) reassigned to Bhargav. `CLAUDE.md` §2 updated; audit counters recalculated |
 | 2026-04-28 | Bhargav Kalambhe | Completed 4.1: Technology Orientation README section — defines data science vs BI/analytics/ML, walks the 5-stage data-project loop (question → data → cleaning → analysis → communication) with an ASCII diagram, maps the six standard roles to Team 06 members, and ties each stage to a concrete folder/owner in this repo |
+| 2026-04-28 | Bhargav Kalambhe | Completed 4.29: `src/load_csv_data.py` — six `pd.read_csv` patterns (plain, `parse_dates`, explicit `dtype`+`na_values`, `usecols`+`index_col`, in-memory `StringIO` with `sep=';'`, safe `try/except FileNotFoundError`) with dtype before/after contrast on the date column (object → datetime64[ns]); README adds a six-row pattern table, full code listing, per-pattern explanations, and "common mistakes" matrix; black + ruff clean. New branching model: branched off `data-dev`; will PR `data4.29` → `data-dev`. |
+| 2026-04-28 | Bhargav Kalambhe | Completed 4.30: `src/inspect_dataframe.py` — three-method inspection routine (`head` / `info` / `describe`) demonstrated on **two** frames: the 3-row bundled CSV (the form a learner first meets) AND a 120-row synthetic frame from `generate_realistic_postings()` with a lognormal salary distribution and ~12% NaN injected, so `info()` actually shows non-null gaps and `describe()` actually shows real spread, real quartiles, and real skew (salary mean 11.63 vs median 10.90 → +0.73 right-skew). Adds `info()` capture via `io.StringIO`, `isna().sum()` cross-check, `describe(include='all')` for categoricals, and an `explain_skewness()` helper. README expanded to cover both-frame demo, realistic `info()` output, realistic `describe()` table, and a "common mistakes" row specifically for "demoing on a 3-row toy CSV only". Branch `data4.30` off latest `data-dev`. |
+| 2026-04-28 | Bhargav Kalambhe | Completed 4.31: `src/dataframe_shape_types.py` — shape-and-types lesson taught through a tidy-vs-messy contrast. Loads the bundled CSV plus a deliberately-broken `MESSY_POSTINGS_CSV` (currency-prefixed salaries `"$12.5"`, mixed-case yes/no, unparsed dates, `"unknown"` mixed into `experience_years`) so `dtypes` actually reveals *real* type lies: `salary_lpa`/`is_remote`/`date_posted`/`experience_years` all default to `object`. A `detect_type_issues()` heuristic flags object columns whose values mostly parse as numeric (fires on `salary_lpa` at 83%, `experience_years` at 86%), and `repair_messy_postings()` walks the canonical fix recipe (`pd.to_numeric` + `pd.to_datetime` + `.astype('Int64' / 'boolean')` with `errors='coerce'`). Arithmetic shown both ways: `messy['salary_lpa'].sum()` returns `"$12.5$18.0-..."` (string concat = silent disaster), `fixed['salary_lpa'].sum()` returns `88.00` (real arithmetic). Branch `data4.31` off `data4.30`. |
 
 ---
 
