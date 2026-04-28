@@ -14,6 +14,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Assignment 4.1 — Technology Orientation: What Is Data Science & How Data Projects Work](#assignment-41--technology-orientation-what-is-data-science--how-data-projects-work)
 - [Question Data Insight Lifecycle Assignment](#question-data-insight-lifecycle-assignment)
 - [Repository Understanding Milestone](#repository-understanding-milestone)
 - [Assignment 4.12 — Organizing Raw Data, Processed Data, and Output Artifacts](#assignment-412--organizing-raw-data-processed-data-and-output-artifacts)
@@ -67,6 +68,90 @@ Every pipeline stage is oriented toward answering this question with statistical
 - **Demand-Supply Analysis**: Joins job postings with candidate outcomes to compute market dynamics
 - **Reproducibility**: Run manifests track git SHA, config hashes, and data hashes for bit-level reproducibility
 - **Production-Ready**: CI/CD pipeline, property-based testing, structured logging, and modular architecture
+
+---
+
+## Assignment 4.1 — Technology Orientation: What Is Data Science & How Data Projects Work
+
+### 1) What Data Science Actually Is
+
+Data science is the discipline of turning raw observations into **decisions that can be acted on with confidence**. It sits at the intersection of three older fields:
+
+- **Statistics** — for reasoning under uncertainty (is this pattern real, or noise?).
+- **Computer science** — for handling data at scale (storage, transformation, computation).
+- **Domain knowledge** — for asking the right question and interpreting results in context.
+
+A useful way to separate it from neighbouring practices:
+
+| Practice | Primary output | Time horizon |
+|---|---|---|
+| Business Intelligence (BI) | Dashboards reporting *what happened* | Past |
+| Data Analytics | Diagnostic explanations of *why it happened* | Past → Present |
+| Data Science | Predictive / inferential answers about *what will happen, or what to do* | Present → Future |
+| Machine Learning | Models that automate decisions at scale | Continuous |
+
+Data science is **not** "running queries faster" or "making prettier charts". It is the structured pursuit of an answer to a specific question, where the answer is defensible because the data, methods, and assumptions can all be inspected.
+
+### 2) How a Data Project Actually Works
+
+Real data projects do not follow a straight line. They follow a loop with five recurring stages:
+
+```
+        ┌─────────────────────────────────────────────────┐
+        ▼                                                 │
+   ┌─────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────────┐
+   │ Question │ → │ Data     │ → │ Cleaning │ → │ Analysis │ → │ Communication │
+   │ Framing  │    │ Sourcing │    │ &        │    │ &        │    │ &             │
+   │          │    │          │    │ Shaping  │    │ Modelling│    │ Decision      │
+   └─────────┘    └──────────┘    └──────────┘    └──────────┘    └──────────────┘
+        ▲                                                                  │
+        └──────────────── feedback / new questions ◄──────────────────────┘
+```
+
+Each stage answers a distinct question:
+
+1. **Question framing** — *What decision are we trying to support?* Ambiguity here invalidates everything downstream. A vague question ("study the job market") produces a vague answer; a specific one ("which 8–10 skills correlate with placement within 90 days?") gives the rest of the pipeline a target.
+2. **Data sourcing** — *What evidence would change our mind?* This determines which datasets are actually relevant, which fields matter, and where the data has to come from (internal logs, public datasets, scraped sources, surveys).
+3. **Cleaning & shaping** — *Is this evidence trustworthy and comparable?* Most project time is spent here — handling missing values, normalising spelling, reconciling different units, removing duplicates, and converting raw rows into analysis-ready tables.
+4. **Analysis & modelling** — *What does the cleaned evidence actually say?* Summary statistics, distributions, correlations, statistical tests, and (sometimes) predictive models. The goal is a result that survives sanity-checking, not a result that looks impressive.
+5. **Communication & decision** — *Can a non-technical decision-maker act on this?* A finding that cannot be explained, doubted, or applied is not yet finished work. This stage produces the visualisations, narrative summaries, and recommendations that close the loop.
+
+The loop is iterative because each stage can send you back. Cleaning often reveals that the original question was unanswerable with the available data; analysis often reveals that a new data source is needed; communication often surfaces a sharper question that restarts the cycle.
+
+### 3) Roles on a Data Project
+
+A typical data project is staffed by overlapping but distinct roles:
+
+| Role | Owns | Cares most about |
+|---|---|---|
+| Data Analyst | Cleaning, exploration, descriptive insight | *Is the data telling the truth?* |
+| Data Scientist | Statistical modelling, inference, experiments | *Is the relationship real and how strong?* |
+| ML Engineer | Predictive models, productionisation | *Does it generalise to unseen data?* |
+| Data Engineer / Backend | Pipelines, storage, reliability | *Will this run reproducibly tomorrow?* |
+| Frontend / Visualisation | Dashboards, charts, decision interfaces | *Can a human read this in 30 seconds?* |
+| Domain Expert / PM | Question framing, interpretation | *Does this answer the actual decision?* |
+
+On Team 06 these map directly: Harshita (analyst) frames the question and prepares the evidence, Harsh (backend) builds the Python scaffolding the pipeline runs on, and Bhargav (frontend & ML) handles the numerical layer and the visual surface where insights are read.
+
+### 4) How This Orientation Applies to Job-ही-Shauk
+
+The research question — *"Which skills are trending, and which skill combinations correlate most strongly with successful job placement?"* — is a textbook data-science problem rather than a BI or pure-analytics problem, because:
+
+- It requires **inference**, not just reporting (correlations, lift, confidence — not just counts).
+- It joins **two independent data surfaces** (employer-side demand, candidate-side outcomes) that must be reconciled before they can be compared.
+- The output must be **decision-ready** for an external audience (educators, learners, recruiters) who will not read the code.
+
+Mapping the project to the five-stage loop:
+
+| Stage | Where it lives in this repo | Owner |
+|---|---|---|
+| Question framing | this README + `audit.md` planning rows (4.1–4.4) | Harshita |
+| Data sourcing | `data/raw/` (immutable inputs) | Harsh / Harshita |
+| Cleaning & shaping | `notebooks/02_data_cleaning.ipynb`, `data/processed/` | Harshita |
+| Analysis & modelling | `notebooks/03_analysis.ipynb`, `src/` modules | Harshita / Bhargav |
+| Communication | `notebooks/04_visualisation.ipynb`, `outputs/figures/`, README sections | Bhargav |
+
+This orientation establishes the vocabulary used by every later assignment: **question, evidence, cleaning, analysis, communication**. Subsequent assignments (4.2 lifecycle deep-dive, 4.3 repository walk-through, 4.4 MVP definition) refine each step — but they only make sense once the overall shape of a data project is clear, which is the contribution of this assignment.
 
 ---
 
@@ -2299,47 +2384,6 @@ The `Identical result : True` line is deliberate proof: **readability changes no
    python3 -m ruff check src/pep8_basics.py
    ```
 
-### Submission Artifacts (Milestone Requirement)
-
-#### A) Pull Request (Code Readability Proof)
-
-Submit a PR that includes `src/pep8_basics.py` and the corresponding `README.md` section for Assignment 4.20.
-
-Your PR should clearly demonstrate:
-
-- Descriptive variable names (avoid vague names like `x`, `a`, `tmp`)
-- Consistent `snake_case` naming
-- Minimal, meaningful comments that explain intent
-- Clean, readable formatting suitable for code review
-
-#### B) Video Walkthrough (~2 minutes)
-
-Record a short screen-share video and walk through your Assignment 4.20 code.
-
-Your walkthrough should cover:
-
-1. **Variable naming clarity**
-   - Show examples of readable names used in the script.
-   - Explain why those names are clearer than vague alternatives.
-2. **Comment quality**
-   - Show where comments/docstrings were added.
-   - Explain what they clarify and why they are useful.
-3. **Readability impact**
-   - Briefly explain how this code is easier for a teammate/reviewer to understand.
-
-#### Mandatory Scenario Response (include verbally in same video)
-
-If a teammate says your code works but is hard to understand, explain:
-
-- Which naming mistakes could cause confusion
-- Which comment mistakes (redundant/misleading) could hurt readability
-- How consistent PEP 8 basics (`snake_case`, intent-focused comments, naming discipline) improve collaboration
-
-### Submission Links
-
-- PR link: `<add-your-pr-link-here>`
-- Video link: `<add-your-video-link-here>`
-
 ### Common Readability Mistakes (Avoided Here)
 
 | Mistake | Example | Why it hurts |
@@ -2657,53 +2701,6 @@ The same eight skills appear in both rankings; the trending block simply reuses 
    python3 -m black src/code_structure.py
    python3 -m ruff check src/code_structure.py
    ```
-
-### Submission Artifacts (Milestone Requirement)
-
-#### A) Pull Request (Code Structure Proof)
-
-Create a PR that includes `src/code_structure.py` and the `README.md` documentation for Assignment 4.21.
-
-Your PR should clearly demonstrate:
-
-- clear separation of imports, functions, and execution logic,
-- function reuse to reduce duplication,
-- logical top-to-bottom flow,
-- clean, consistent formatting and organization.
-
-#### B) Video Walkthrough (~2 minutes)
-
-Record a short screen-share walkthrough of the same code.
-
-Your walkthrough should include:
-
-1. **Code overview**
-   - Show the overall file structure.
-   - Explain how sections are organized.
-2. **Functions and reuse**
-   - Point out reusable functions.
-   - Explain how they reduce repeated logic.
-3. **Execution flow**
-   - Explain how the script executes from top to bottom.
-   - Show where execution begins (`main()` and the entry-point guard).
-
-#### Mandatory Scenario Response (in the same video)
-
-After the walkthrough, answer:
-
-> A script works correctly but is difficult for others to understand or extend. What structural issues might cause this, and how would reorganizing the code improve readability and reuse?
-
-Reference these points in your answer:
-
-- code organization,
-- function reuse,
-- separation of concerns,
-- maintainability.
-
-### Submission Links
-
-- PR link: `<add-your-pr-link-here>`
-- Video link: `<add-your-video-link-here>`
 
 ### Common Structural Mistakes (Avoided Here)
 

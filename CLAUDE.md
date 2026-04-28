@@ -26,12 +26,12 @@ Every assignment has **exactly one owner**. Do not author work for a role you do
 
 | Member | Role | Owns assignments |
 |---|---|---|
-| Harshita Soni ★ | Data Analyst (Leader) | 4.1–4.4, 4.29–4.38, 4.44 |
+| Harshita Soni ★ | Data Analyst (Leader) | _On leave — assignments reassigned to Bhargav as of 2026-04-28_ |
 | Harsh Singh | Backend | 4.5–4.19 |
-| **Bhargav Kalambhe** | **Frontend & ML** | **4.20–4.28, 4.39–4.43** |
+| **Bhargav Kalambhe** | **Frontend & ML + Analyst (covering)** | **4.1–4.4, 4.20–4.28, 4.29–4.38, 4.39–4.43, 4.44** |
 
 **Current user:** Bhargav Kalambhe.
-When asked to "do my next work", pick the **lowest-numbered unchecked assignment in Bhargav's range** from `audit.md`.
+When asked to "do my next work", pick the **lowest-numbered unchecked assignment in Bhargav's range** from `audit.md` (which now spans 4.1–4.4, 4.20–4.28, 4.29–4.38, 4.39–4.43, 4.44).
 
 ---
 
@@ -144,9 +144,9 @@ python3 -m jupyter notebook notebooks/
 ## 8. Current Context Pointers
 
 - **User:** Bhargav Kalambhe (Frontend & ML)
-- **Bhargav's next assignment:** see the first unchecked Bhargav row in `audit.md`
-- **Harsh's status:** assignments 4.5–4.19 marked `Done` (see `audit.md`)
-- **Harshita's status:** not yet started (no rows in audit log)
+- **Bhargav's next assignment:** lowest-numbered unchecked row across the merged ranges 4.1–4.4, 4.20–4.28, 4.29–4.38, 4.39–4.43, 4.44 in `audit.md`
+- **Harsh's status:** assignments 4.5, 4.6, 4.7, 4.8, 4.9, 4.12–4.19 marked `Done` (see `audit.md`); 4.10, 4.11 still open
+- **Harshita's status:** on leave from 2026-04-28; her 15 tasks are now Bhargav's (see §2)
 
 ---
 

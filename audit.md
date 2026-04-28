@@ -7,11 +7,11 @@
 
 ## 1. Master Checklist (4.1 – 4.44)
 
-### Harshita Soni ★ — Data Analyst (15 tasks)
+### Harshita Soni ★ — Data Analyst (15 tasks, on leave from 2026-04-28; covered by Bhargav)
 
 | # | Task | Status | Last Updated | Notes |
 |---|---|---|---|---|
-| 4.1 | Technology Orientation: What Is Data Science & How Data Projects Work | `Not Started` | — | |
+| 4.1 | Technology Orientation: What Is Data Science & How Data Projects Work | `Done` | 2026-04-28 | Bhargav — README section: what DS is (vs BI/analytics/ML), 5-stage data-project loop with ASCII diagram, role map, and Job-ही-Shauk stage→folder→owner mapping |
 | 4.2 | [LM] Understanding the Data Science Lifecycle: Question → Data → Insight | `Not Started` | — | |
 | 4.3 | [LM] Reading & Interpreting a Sample Data Science Project Repository | `Not Started` | — | |
 | 4.4 | Building the Project Plan & MVP Definition for the Data Science Sprint | `Not Started` | — | |
@@ -72,12 +72,12 @@
 
 | Member | Done | In Progress | Not Started | Total |
 |---|---:|---:|---:|---:|
-| Harshita Soni ★ | 0 | 0 | 15 | 15 |
+| Harshita Soni ★ (on leave) | 0 | 0 | 0 | 0 |
 | Harsh Singh | 10 | 0 | 5 | 15 |
-| Bhargav Kalambhe | 9 | 0 | 5 | 14 |
-| **Overall** | **19** | **0** | **25** | **44** |
+| Bhargav Kalambhe (incl. analyst cover) | 10 | 0 | 19 | 29 |
+| **Overall** | **20** | **0** | **24** | **44** |
 
-Done: **19 / 44** (~43%)
+Done: **20 / 44** (~45%)
 
 ---
 
@@ -122,6 +122,8 @@ Done: **19 / 44** (~43%)
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.26: `src/broadcasting.py` — four broadcasting cases (scalar+1D, scalar+2D, matrix+row-vector, matrix+column-vector) plus a caught `ValueError` for incompatible `(3,)`+`(4,)`; ASCII layout walk-through and right-aligned shape table in the README; black + ruff clean |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.27: `src/pandas_series.py` — 4 construction patterns (list → default index, NumPy array → dtype preserved, list + explicit labels, dict → keys as index), `iloc` vs `loc` access, boolean-mask filtering, and label-aware addition demonstrating that unmatched labels become `NaN` (dtype promoted to `float64`); black + ruff clean |
 | 2026-04-20 | Bhargav Kalambhe | Completed 4.28: `src/pandas_dataframes.py` — four DataFrame construction patterns (dict-of-lists → columns, list-of-dicts → rows with `NaN` for missing keys, dict-of-Series → typed columns with index alignment, `pd.read_csv` on `data/raw/sample_job_postings.csv`), shape/columns/index/dtypes inspection, column and row selection, and confirmation that `frame.values` is an `np.ndarray` closing the 4.22 → 4.28 arc; black + ruff clean |
+| 2026-04-28 | Bhargav Kalambhe | Ownership update: Harshita on leave from 2026-04-28; her 15 tasks (4.1–4.4, 4.29–4.38, 4.44) reassigned to Bhargav. `CLAUDE.md` §2 updated; audit counters recalculated |
+| 2026-04-28 | Bhargav Kalambhe | Completed 4.1: Technology Orientation README section — defines data science vs BI/analytics/ML, walks the 5-stage data-project loop (question → data → cleaning → analysis → communication) with an ASCII diagram, maps the six standard roles to Team 06 members, and ties each stage to a concrete folder/owner in this repo |
 
 ---
 
