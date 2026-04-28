@@ -1,5 +1,6 @@
 # Local IDE / planning artefacts (not team-tracked)
 .config.kiro
+.vscode/
 design.md
 requirements.md
 tasks.md

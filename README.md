@@ -37,6 +37,13 @@
 - [Assignment 4.29 — Loading CSV Data into Pandas DataFrames](#assignment-429--loading-csv-data-into-pandas-dataframes)
 - [Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()](#assignment-430--inspecting-dataframes-using-head-info-and-describe)
 - [Assignment 4.31 — Understanding Data Shapes and Column Data Types](#assignment-431--understanding-data-shapes-and-column-data-types)
+- [Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing](#assignment-432--selecting-rows-and-columns-using-indexing-and-slicing)
+- [Assignment 4.33 — Detecting Missing Values in DataFrames](#assignment-433--detecting-missing-values-in-dataframes)
+- [Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies](#assignment-434--handling-missing-values-using-drop-and-fill-strategies)
+- [Assignment 4.35 — Identifying and Removing Duplicate Records](#assignment-435--identifying-and-removing-duplicate-records)
+- [Assignment 4.36 — Standardizing Column Names and Data Formats](#assignment-436--standardizing-column-names-and-data-formats)
+- [Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns](#assignment-437--computing-basic-summary-statistics-for-individual-columns)
+- [Assignment 4.38 — Comparing Distributions Across Multiple Columns](#assignment-438--comparing-distributions-across-multiple-columns)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -5031,6 +5038,1517 @@ python3 -m ruff check src/dataframe_shape_types.py
 ### Conclusion
 
 Shape and types are the blueprint of the dataset — every later cleaning, joining, modelling, or visualisation operation depends on getting them right. Running `frame.shape` and `frame.dtypes` immediately after `frame.head()` (4.30) takes ten seconds and prevents the most common class of silent analysis bugs. The tidy-vs-messy contrast in this assignment makes both the diagnostic step and the repair recipe concrete: you can see the lie in the dtype vector and you can see the arithmetic light up after the repair.
+
+---
+
+## Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+After loading (4.29), inspecting (4.30), and confirming shape + types (4.31), every workflow's next move is to *extract a subset*: "give me only the Finance postings", "give me the salary column", "give me the first ten rows for the demo." How that selection is written determines whether the result is the rows you wanted, the rows next to them, or a silent `SettingWithCopyWarning` that breaks later writes.
+
+### File Name
+
+`src/select_rows_columns.py`
+
+### Why a Label Index Matters for the Demo
+
+The script generates a 50-row synthetic frame and **sets `job_id` as the index** (with values starting at `1001`, not `0`). That single decision is what makes `iloc` and `loc` *visibly* different — with a default `RangeIndex(0, N)`, position `0` and label `0` collide and the lesson is invisible. Here `iloc[0]` returns the first row by *position*, while `loc[1001]` returns the same row by *label* — and `loc[1003]` is the third one without you having to count.
+
+### Seven Selection Patterns
+
+| # | Pattern | Returns | Key fact |
+|---|---|---|---|
+| 1 | `df["col"]` | `Series` | a string returns a Series |
+| 1b | `df[["a", "b"]]` | `DataFrame` | a list returns a DataFrame |
+| 2 | `df.iloc[i]` / `df.iloc[a:b]` | `Series` / `DataFrame` | positional, zero-based, **upper-bound exclusive** |
+| 3 | `df.loc[label]` / `df.loc[a:b]` | `Series` / `DataFrame` | label-based, **upper-bound INCLUSIVE** |
+| 4 | `df.loc[rows, cols]` | `DataFrame` | combined row + column selection |
+| 5 | `df[df["col"] == v]` | `DataFrame` | boolean-mask filter |
+| 6 | `df.loc[row, col] = v` | (assignment) | the **safe write** form — never chain two `[]` calls |
+| 7 | `safe_iloc(frame, i)` *(this script)* | `Series \| None` | defensive wrapper that returns `None` for out-of-range positions |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing."""
+
+from __future__ import annotations
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+
+def generate_postings(n_rows=50, seed=7) -> pd.DataFrame:
+    """50-row synthetic frame indexed by job_id (label index, not RangeIndex)."""
+    rng = np.random.default_rng(seed)
+    base = pd.Timestamp("2024-01-01")
+    return pd.DataFrame({
+        "job_id": np.arange(1001, 1001 + n_rows, dtype="int64"),
+        "job_title": rng.choice(ROLES, size=n_rows),
+        "sector": rng.choice(SECTORS, size=n_rows),
+        "experience_years": rng.integers(0, 12, size=n_rows),
+        "salary_lpa": rng.lognormal(2.4, 0.5, size=n_rows).round(1),
+        "date_posted": base + pd.to_timedelta(
+            rng.integers(0, 180, size=n_rows), unit="D"
+        ),
+    }).set_index("job_id")
+
+
+def safe_iloc(frame: pd.DataFrame, position: int) -> pd.Series | None:
+    """Defensive iloc: returns None instead of raising IndexError."""
+    if not 0 <= position < len(frame):
+        return None
+    return frame.iloc[position]
+```
+
+### Explanation of Each Pattern
+
+#### 1. Column selection — Series vs DataFrame
+
+```python
+df["job_title"]                # -> Series  (single column)
+df[["job_title", "salary_lpa"]]  # -> DataFrame (column subset)
+```
+
+The shape of the return type depends entirely on whether you passed a string or a *list*. Many bugs come from accidentally writing `df["x"]` when `df[["x"]]` was needed (or vice versa) — the next operation expects one type and gets the other.
+
+#### 2. Rows by **position** — `iloc`
+
+```python
+df.iloc[0]      # first row, as a Series
+df.iloc[0:3]    # rows 0, 1, 2 — NOT 0..3 (Python half-open slicing)
+df.iloc[-1]     # last row (negative index works)
+```
+
+`iloc` is the *positional* selector. It behaves exactly like Python list slicing: zero-based, upper bound exclusive, negative indexes count from the end. Use `iloc` when the row's *position* is what you actually mean ("the first row", "every 5th row").
+
+#### 3. Rows by **label** — `loc`
+
+```python
+df.loc[1001]          # the row whose job_id == 1001
+df.loc[1001:1003]     # INCLUSIVE on both ends — returns 3 rows, not 2
+```
+
+`loc` looks up by the *value* in the index, not the position. The biggest gotcha: `loc[a:b]` is inclusive on both ends, unlike Python's regular `[a:b]`. This is a deliberate design choice — when you slice by label, you usually mean "from `a` to `b`, both included" rather than "up to but not including `b`."
+
+#### 4. Combined row + column selection
+
+```python
+finance_ids = df.index[df["sector"] == "Finance"][:3]
+df.loc[finance_ids, ["job_title", "salary_lpa"]]
+```
+
+`loc[rows, cols]` is the canonical *"give me these specific cells"* form. `iloc` has the same shape: `df.iloc[row_positions, col_positions]`. Always specify both axes in one call rather than chaining `df.loc[rows].loc[cols]`.
+
+#### 5. Boolean masking
+
+```python
+df[df["sector"] == "Finance"]                                # one condition
+df[(df["sector"] == "Finance") & (df["salary_lpa"] > 15)]    # combined
+```
+
+Multi-condition masking uses `&`, `|`, `~` on Series — **not** Python's `and`, `or`, `not`. The boolean ones operate element-wise; the keyword ones don't. Parentheses around each comparison are required because `&` has higher precedence than `==` in Python.
+
+#### 6. Chained-indexing pitfall — why `df["col"][i] = v` is wrong
+
+```python
+# DON'T:
+df["salary_lpa"][1001] = 99    # -> SettingWithCopyWarning (sometimes silent)
+
+# DO:
+df.loc[1001, "salary_lpa"] = 99   # always sticks, never warns
+```
+
+The first form does two operations: `df["salary_lpa"]` returns a Series (sometimes a view, sometimes a copy), and the `[1001] = 99` assigns into *that* Series. When Pandas returns a copy, the write doesn't propagate back to the original frame — but no error is raised, only a warning, and the warning isn't always reliable. The `loc[row, col]` form is one indivisible operation that always writes through.
+
+**Rule of thumb:** any *write* uses `.loc` / `.iloc` with both axes specified together; never chain two `[]` calls when assigning.
+
+#### 7. Out-of-range handling — `safe_iloc`
+
+```python
+def safe_iloc(frame, position):
+    if not 0 <= position < len(frame):
+        return None
+    return frame.iloc[position]
+```
+
+Raw `iloc[position]` raises `IndexError` for out-of-range positions. Wrapping in a defensive helper that returns `None` lets calling code branch on a missing-row case without `try`/`except` clutter. Same idea as the `safe_get` from 4.23's NumPy lesson, just transplanted to DataFrames.
+
+### Sample Output (excerpt)
+
+```
+1) Column selection — single name vs list of names
+
+df['job_title'].head(5)  -> Series (one column):
+job_id
+1001    Data Engineer
+1002      ML Engineer
+1003    Data Engineer
+...
+type(...): Series
+
+df[['job_title', 'salary_lpa']].head(5)  -> DataFrame:
+              job_title  salary_lpa
+job_id
+1001      Data Engineer        20.7
+1002        ML Engineer        15.3
+type(...): DataFrame
+
+3) Rows by LABEL — loc[]:
+
+df.loc[1001:1003] -> INCLUSIVE on both ends (returns 3 rows, not 2):
+            job_title    sector  experience_years  salary_lpa date_posted
+job_id
+1001    Data Engineer  Technology               8        20.7  2024-02-11
+1002      ML Engineer     Retail               4        15.3  2024-04-22
+1003    Data Engineer    Finance               2        11.4  2024-05-09
+
+5) Boolean mask:
+df[df['sector'] == 'Finance']  -> 13 of 50 rows matched
+
+6) Verified write via .loc: before = 20.7, after = 99.0.
+
+7) safe_iloc(frame, len(frame) + 100) -> None  (None, no crash)
+```
+
+### Selection Cheat Sheet
+
+```
+df['col']                  -> Series        (single column)
+df[['a', 'b']]             -> DataFrame     (column subset)
+df.iloc[i]                 -> Series        (i-th row, positional)
+df.iloc[a:b]               -> DataFrame     (positions a..b-1, exclusive)
+df.loc[label]              -> Series        (row by index value)
+df.loc[a:b]                -> DataFrame     (INCLUSIVE both ends)
+df.loc[rows, cols]         -> DataFrame     (cells)
+df[df['col'] == v]         -> DataFrame     (boolean mask)
+df.loc[mask, 'col'] = v    -> safe write    (one-shot assignment)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/select_rows_columns.py
+python3 -m black src/select_rows_columns.py
+python3 -m ruff check src/select_rows_columns.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| `df["x"]` when `df[["x"]]` was meant (or vice versa) | Series vs DataFrame mismatch breaks the next operation |
+| Treating `loc[a:b]` as half-open like Python | Off-by-one — `loc` is inclusive on both ends |
+| Chained write: `df["col"][i] = v` | `SettingWithCopyWarning`; the assignment may or may not stick |
+| Combining masks with `and` / `or` instead of `&` / `|` | `ValueError: The truth value of an array is ambiguous` |
+| Skipping parentheses in multi-condition masks | Operator-precedence bug — `&` binds tighter than `==` |
+| Using a `RangeIndex(0..N)` for the demo | iloc and loc coincide, so the lesson is invisible |
+| Passing scalars where a list was expected | `KeyError` instead of returning a single-row DataFrame |
+
+### Conclusion
+
+Selection is the workhorse operation of every Pandas pipeline — every filter, every aggregation, every plot starts with picking out the rows and columns of interest. The seven patterns here cover every shape of selection you'll write: single column, multi column, positional row, label row, combined cells, boolean mask, and safe write. Once these are reflexive, the cleaning suite that follows (4.33–4.36 missing-value detection, drop/fill, dedup, standardisation) is mostly composing them.
+
+---
+
+## Assignment 4.33 — Detecting Missing Values in DataFrames
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Detection comes before cleaning. Before deciding *how* to handle missing data (4.34: drop or fill), every workflow has to answer four detection questions:
+
+1. **Where** is data missing? (boolean mask)
+2. **How much** is missing? (per-column count and proportion)
+3. **Which rows** are affected? (any-axis row reduction)
+4. **Are missingness patterns random or structured?** (column co-occurrence, group-based rates)
+
+### File Name
+
+`src/detect_missing_values.py`
+
+### Why a Random-Missing-Only Demo Isn't Enough
+
+If every NaN in the demo frame is sprinkled randomly, the four detection questions all collapse into the same answer ("about 15% missing, evenly distributed"). The interesting question — *random or structured?* — has no signal to detect. So the script generates a 100-row synthetic frame with **deliberately mixed missingness patterns**:
+
+| Column | Missing rate | Pattern |
+|---|---|---|
+| `salary_lpa` | ~15% | Random across rows |
+| `date_posted` | ~5% | Random across rows |
+| `perks` | ~30% | **Sector-driven** — 70% missing in Manufacturing/Retail, 8% elsewhere |
+| `benefits_score` | ~20% | **Correlated with `perks`** — 80% missing when perks missing, 5% otherwise |
+
+This setup means the co-missing matrix and the per-sector breakdown both have *real* signal to surface — and the lesson reads as practical, not theoretical.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.33 — Detecting Missing Values in DataFrames."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def per_column_counts(frame: pd.DataFrame) -> pd.Series:
+    """Count of missing entries per column."""
+    return frame.isna().sum().sort_values(ascending=False)
+
+
+def per_column_proportions(frame: pd.DataFrame) -> pd.Series:
+    """Fraction of each column that is missing."""
+    return frame.isna().mean().sort_values(ascending=False)
+
+
+def co_missing_matrix(frame: pd.DataFrame) -> pd.DataFrame:
+    """Pairwise count of rows where two columns are both missing.
+
+    A high off-diagonal entry means structured (correlated) missingness.
+    """
+    mask = frame.isna().astype(int)
+    return mask.T @ mask
+
+
+def missingness_by_group(
+    frame: pd.DataFrame, group_col: str, target_col: str
+) -> pd.Series:
+    """Per-group missing rate of `target_col`."""
+    return (
+        frame.groupby(group_col, observed=True)[target_col]
+        .apply(lambda series: series.isna().mean())
+        .sort_values(ascending=False)
+    )
+```
+
+### Explanation of Each Question
+
+#### 1. Where is data missing? — `isna()` boolean mask
+
+```python
+frame.isna()      # same-shape boolean frame, True where missing
+frame.isnull()    # exact synonym; pick one and stick with it
+```
+
+Both names exist for historical reasons. The boolean mask itself is the foundation — every later detection helper is just an aggregation over this mask (`.sum()`, `.mean()`, `.any()`, `.all()`).
+
+#### 2. How much is missing? — counts, proportions, severity
+
+```python
+frame.isna().sum()         # per-column count of NaN
+frame.isna().mean()         # per-column fraction (0.0–1.0)
+frame.isna().sum().sum()    # total missing cells in the frame
+```
+
+Proportions are usually more useful than raw counts because columns are different lengths after filtering. The script also bands the rate into a severity label:
+
+| Rate | Severity |
+|---|---|
+| 0% | complete |
+| <5% | low |
+| <20% | moderate |
+| <50% | high |
+| ≥50% | critical |
+
+Critical-severity columns often need to be dropped entirely; complete columns can be ignored; the moderate band is where the actual fill-vs-drop decisions live.
+
+#### 3. Which rows are affected? — `any` / `all` row reductions
+
+```python
+frame.isna().any(axis=1)         # rows with at least one missing value
+frame.isna().all(axis=1)         # rows where every column is missing
+frame.isna().sum(axis=1)         # missing-count per row, for triage
+```
+
+`axis=1` collapses across columns, leaving one value per row. `any` is the cheapest "do I need to clean this row at all?" check. `all` catches the rare case of a fully-empty row that should just be dropped. `sum(axis=1)` ranks rows by *how* broken they are — handy when manually triaging the worst offenders.
+
+#### 4. Random or structured? — co-occurrence and group breakdown
+
+```python
+mask = frame.isna().astype(int)
+co_matrix = mask.T @ mask          # pairwise co-missing counts
+```
+
+The diagonal of the co-matrix is "rows where THIS column is missing"; off-diagonal cells are "rows where BOTH columns are missing." When two columns are missing together far more than chance would predict, you've found a structural relationship, not random NaN.
+
+Same idea, simpler form: per-group missing rate.
+
+```python
+frame.groupby("sector", observed=True)["perks"].apply(
+    lambda series: series.isna().mean()
+)
+```
+
+If the rate varies dramatically across groups, the missingness is **structured by that group**, and the cleaning strategy needs to know — sector-level fills, for example, instead of a global mean.
+
+### Three Missing Sentinels — One Detection Method
+
+Pandas uses three different sentinels under the hood for "missing":
+
+| Sentinel | Used for | Example dtype |
+|---|---|---|
+| `np.nan` | float / generic | `float64` |
+| `pd.NaT` | datetime / timedelta | `datetime64[ns]` |
+| `pd.NA` | nullable string / Int64 / boolean | `string`, `Int64`, `boolean` |
+
+`isna()` returns `True` for all three. **Never** test for missingness with `value == np.nan` — that comparison is always `False` (NaN ≠ NaN by IEEE 754 rules).
+
+### Sample Output (excerpt)
+
+```
+2) Per-column missing summary (sorted by count):
+
+                  missing_count  missing_rate  severity
+benefits_score              34         0.340      high
+perks                       33         0.330      high
+salary_lpa                   8         0.080  moderate
+date_posted                  6         0.060  moderate
+... (other columns: 0 missing)
+
+3) Row-level detection:
+  Rows with ANY missing : 43 / 100 (43%)
+
+4) Pairwise co-missing counts:
+                salary_lpa  perks  benefits_score  date_posted
+salary_lpa               8      3               3            1
+perks                    3     33              32            2     <- 32 of 33 perks-missing rows ALSO miss benefits
+benefits_score           3     32              34            2
+date_posted              1      2               2            6
+
+Per-sector missing rate of `perks`:
+sector
+Manufacturing    0.731
+Retail           0.647
+Finance          0.111
+Technology       0.053
+Healthcare       0.000     <- structural: not random missingness
+
+5) Three sentinels — all detected by isna():
+            value                     type  isna()_says
+salary_lpa    NaN           np.nan (float)         True
+date_posted   NaT        pd.NaT (datetime)         True
+perks        <NA>  pd.NA (nullable string)         True
+```
+
+### Detection Cheat Sheet
+
+```
+frame.isna() / isnull()      -> same-shape boolean mask
+frame.isna().sum()           -> per-column count
+frame.isna().mean()          -> per-column proportion
+frame.isna().sum().sum()     -> total missing cells
+frame.isna().any(axis=1)     -> rows with at least one missing
+frame.isna().all(axis=1)     -> rows where everything is missing
+frame.isna().sum(axis=1)     -> missing count per row
+mask.T @ mask                -> pairwise co-missing matrix
+frame.groupby(g)[c].apply(lambda s: s.isna().mean())
+                             -> per-group missing rate
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/detect_missing_values.py
+python3 -m black src/detect_missing_values.py
+python3 -m ruff check src/detect_missing_values.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Testing `value == np.nan` | Always returns `False` — NaN is not equal to itself |
+| Reporting only counts, not proportions | Severity is invisible — 100 NaN out of 200 rows is critical, out of 1M rows is fine |
+| Skipping the pattern question | Structured missingness gets cleaned with a wrong (global-mean) strategy |
+| Confusing `isna()` with `notna()` | Negation flip silently inverts the mask; use `~mask` if you need both |
+| Dropping rows with `any` missing without checking severity | A 5%-missing column propagates a 30%+ row-loss when intersected with others |
+| Using `frame.isnull()` in some places and `isna()` in others | Just visual noise; both are the same call |
+| Confusing 0 missing in a tiny demo CSV with "no missing data" | The 3-row bundled CSV detects 0 NaN — legitimate but unhelpful as a teaching demo |
+
+### Conclusion
+
+The four detection questions — *where*, *how much*, *which rows*, *random or structured* — are the diagnostic step before any cleaning decision. Running them on a frame with *deliberately structured* missingness shows why all four matter: a global "fill with mean" strategy is wrong for `perks` because the missingness is sector-driven, not random. The next assignment (4.34) takes the answers from this detection step and turns them into drop / fill choices.
+
+---
+
+## Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Detection (4.33) said *where* and *how much* is missing. This assignment turns those answers into action — either dropping the rows / columns, filling in the missing values, or some mix of the two applied per column based on what the column actually represents.
+
+The lesson is that **there is no single right strategy**. Five strategies are demonstrated side-by-side on the same shaped-missingness frame from 4.33 so the trade-offs are visible: how many rows survive, how the salary mean shifts, whether the categorical distribution gets distorted.
+
+### File Name
+
+`src/handle_missing_values.py`
+
+### Five Strategies — Trade-offs at a Glance
+
+| Strategy | Pandas call | When it's right | Cost |
+|---|---|---|---|
+| Drop any-missing rows | `dropna(how="any")` | Frame is small and you need complete cases | Lossy — here, 43 of 100 rows |
+| Drop targeted rows | `dropna(subset=[crit])` | Only some columns are essential | Smaller loss, no invented values |
+| Drop high-missing columns | `df[df.isna().mean() <= t]` | Column is too sparse to be useful | Loses the signal in that column entirely |
+| Fill numeric with median | `fillna(series.median())` | Column distribution is skewed | Pulls all NaN to a single value (density distorted) |
+| Group-aware fill | `groupby(g)[c].transform("median")` | **Structured missingness** (sector-driven, etc.) | Preserves within-group distribution |
+
+The combined recipe at the end picks one of these per column, based on what 4.33's pattern detection said about that column.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def drop_rows_with_any_missing(frame: pd.DataFrame) -> pd.DataFrame:
+    """Drop any row that has any missing value. Most aggressive."""
+    return frame.dropna(how="any")
+
+
+def drop_columns_above_missing_rate(
+    frame: pd.DataFrame, threshold: float
+) -> pd.DataFrame:
+    """Drop columns whose missing rate exceeds threshold (e.g. 0.5)."""
+    rates = frame.isna().mean()
+    return frame[rates[rates <= threshold].index]
+
+
+def fill_numeric_with_median(frame: pd.DataFrame, column: str) -> pd.DataFrame:
+    """Fill numeric NaN with the column median (skew-resistant)."""
+    return frame.assign(**{column: frame[column].fillna(frame[column].median())})
+
+
+def fill_numeric_by_group(
+    frame: pd.DataFrame, group_col: str, target_col: str
+) -> pd.DataFrame:
+    """Group-aware fill: each group's NaN gets that group's median.
+
+    Right strategy when 4.33 detected structured missingness — a global
+    fill would smear sector-specific structure across all rows.
+    """
+    group_medians = frame.groupby(group_col, observed=True)[target_col].transform(
+        "median"
+    )
+    return frame.assign(**{target_col: frame[target_col].fillna(group_medians)})
+
+
+def fill_with_constant(frame: pd.DataFrame, column: str, value: object) -> pd.DataFrame:
+    """Constant fill — best for categoricals where missing means 'no info'."""
+    return frame.assign(**{column: frame[column].fillna(value)})
+```
+
+### Explanation of Each Strategy
+
+#### 1. Drop strategies — three flavours
+
+```python
+frame.dropna(how="any")                              # 43 rows lost on this frame
+frame.dropna(subset=["salary_lpa", "date_posted"])   # 13 rows lost — targeted
+frame.dropna(thresh=ncols - 1)                       # keep rows missing ≤ 1 cell
+df[df.isna().mean() <= 0.25]                         # drop columns with >25% missing
+```
+
+`how="any"` is the easiest to write but the most destructive. `subset=` is usually what you actually want — only drop a row when an *important* column is missing. `thresh=` is the per-row sliding cut-off. Dropping columns is the right move when a column is so sparse the signal isn't worth the storage (here, `perks` at 33% crosses a 25% gate).
+
+#### 2. Fill numeric — mean vs median vs group-aware
+
+```python
+frame.fillna(frame["salary_lpa"].mean())                              # global mean
+frame.fillna(frame["salary_lpa"].median())                             # global median (skew-resistant)
+frame.groupby("sector")["salary_lpa"].transform("median")              # per-sector median
+```
+
+Median beats mean on a skewed distribution — and 4.30 confirmed `salary_lpa` is right-skewed (mean 11.63 vs median 10.90). The per-sector median is what 4.33's pattern detection pointed at: when missingness is sector-driven, a global statistic smears structure that the cleaning step should preserve.
+
+#### 3. Fill categorical — constant vs mode
+
+```python
+frame["perks"].fillna("Unknown")                  # preserves the "no info" signal
+frame["perks"].fillna(frame["perks"].mode()[0])    # pushes NaN into dominant bucket
+```
+
+The output makes the trade-off concrete:
+
+```
+perks value counts (source, NaN visible):    after fillna('Unknown'):    after fillna(mode):
+gym       16                                  Unknown   33                 gym       49 ← distorted
+training  16                                  training  16                 training  16
+NA        33   ← the missingness                gym       16                 stock     13
+stock     13                                  stock     13                 wfh       12
+wfh       12                                  wfh       12                 meals     10
+meals     10                                  meals     10
+```
+
+Filling with `"Unknown"` keeps a 33-row "we don't know" bucket visible to any later `groupby('perks')`. Filling with mode collapses those 33 rows into `gym` (16 → 49) — that's a 3× inflation that distorts every later aggregation.
+
+#### 4. The defensible combined recipe
+
+The script ends with a per-column recipe that picks the right strategy per column based on what 4.33 detected:
+
+| Column | Choice | Why |
+|---|---|---|
+| `salary_lpa` | per-sector median | Skewed distribution + worth keeping rows |
+| `date_posted` | drop rows | Only 5% missing; no good way to invent a date |
+| `perks` | `"Unknown"` constant | 33% missing, structured — preserve the signal |
+| `benefits_score` | per-sector median | Correlated with `perks`, structured |
+
+Result: shape `(100, 8)` → `(94, 8)` with **0 missing cells in any column**. Six rows lost (the date-missing ones), no values invented for `perks`, no global statistic smeared across sectors.
+
+#### 5. The dtype-mismatch trap
+
+```python
+raw["perks"].fillna(0)            # perks becomes object/mixed (string and int!)
+raw["salary_lpa"].fillna("?")     # salary becomes object (no more arithmetic)
+```
+
+Fill values must match the column's intended dtype. The script uses `"Unknown"` (string) for the string-typed `perks` column on purpose — `pd.NA → "Unknown"` keeps the dtype as `string`, no silent coercion to mixed-type `object`.
+
+### Sample Output (excerpt)
+
+```
+1) Drop strategies — three flavours
+
+  dropna(how='any')                              (100, 8) -> (57, 8)  (-43 rows, -0 cols)
+  dropna(subset=['salary_lpa', 'date_posted'])    (100, 8) -> (87, 8)  (-13 rows, -0 cols)
+  dropna(thresh=ncols-1)  (keep rows missing <=1) (100, 8) -> (84, 8)  (-16 rows, -0 cols)
+  drop columns with >25% missing                  (100, 8) -> (100, 6) (-0 rows, -2 cols)
+
+2) Fill strategies — numeric (mean / median / group):
+  source (NaN dropped from mean)                  mean 11.34 -> 11.34
+  fillna(global mean)                              mean 11.34 -> 11.34
+  fillna(global median)                            mean 11.34 -> 11.27   (-0.07)
+  fillna(per-sector median)                        mean 11.34 -> 11.21   (-0.13)
+
+3) Categorical fill:
+  perks after fillna('Unknown'):  Unknown 33, training 16, gym 16, ...
+  perks after fillna(mode):       gym 49 (distorted), training 16, ...
+
+4) Combined recipe — shape (100, 8) -> (94, 8), 0 missing cells in any column.
+```
+
+### Drop / Fill Cheat Sheet
+
+```
+frame.dropna(how="any")                         -> any-NaN row drop (lossy)
+frame.dropna(subset=[col])                      -> targeted row drop
+frame.dropna(thresh=N)                          -> keep rows with ≥ N non-NaN
+frame.dropna(axis=1)                            -> drop columns with NaN
+series.fillna(value)                            -> constant fill
+series.fillna(series.median())                  -> median fill
+series.fillna(series.mode().iloc[0])            -> mode fill
+frame.groupby(g)[c].transform("median")         -> group-aware fill source
+series.ffill() / series.bfill()                 -> forward/back fill (time-ordered)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/handle_missing_values.py
+python3 -m black src/handle_missing_values.py
+python3 -m ruff check src/handle_missing_values.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| `dropna(how="any")` as the default cleaning | 43% row loss on this frame; usually too aggressive |
+| Filling with mean on a skewed distribution | Pulls fill toward the long tail; median is safer |
+| Filling structured-missingness with a global statistic | Smears sector-specific signal that 4.33 detected |
+| Mode fill on a categorical with 30%+ missing | Inflates dominant category 3×, distorts groupby |
+| Filling categorical with a number (or vice versa) | Silent dtype coercion to `object`; later type checks fail |
+| One strategy for the whole frame | Different columns have different missingness shapes — pick per column |
+| Dropping rows without recording how many were lost | The cleaning step becomes invisible to downstream review |
+| Demoing only on a clean CSV | The strategies have no NaN to handle — lesson reads as theoretical |
+
+### Conclusion
+
+Drop and fill are the two operations that actually *do* something with the missingness 4.33 detected. The right call depends on the column: critical-but-rarely-missing columns (`date_posted` at 5%) get dropped at the row level; skewed numerics with structured missingness (`salary_lpa`, `benefits_score`) get a per-sector median; categorical columns where "missing" carries information (`perks`) get a `"Unknown"` constant. The combined recipe at the end of the script encodes those choices, and the resulting frame is ready for the deduplication (4.35) and standardisation (4.36) steps that follow.
+
+---
+
+## Assignment 4.35 — Identifying and Removing Duplicate Records
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Duplicate rows are the silent inflator of every aggregate metric: counts double, averages stay roughly right, distributions look plausible, and a downstream "we have 1,200 unique postings" turns into a confidence-eroding "well, actually 1,043." Deduplication is therefore one of the standard cleaning steps — but it's also one of the easiest to get wrong, because *"duplicate"* means different things in different contexts.
+
+### File Name
+
+`src/dedup_records.py`
+
+### Two Kinds of Duplicates Injected on Purpose
+
+The script generates a 114-row frame seeded as **100 unique rows + 8 exact duplicates + 6 logical duplicates**. Two duplicate kinds, two detection strategies:
+
+| Kind | What it looks like | Example | Caught by |
+|---|---|---|---|
+| **Exact** | Byte-identical row re-appended | `(3016, "Backend Engineer", "Beta Inc", ..., 4.9)` and `(3016, "Backend Engineer", "Beta Inc", ..., 4.9)` | `duplicated()` |
+| **Logical** | Same job, different `job_id` (re-posted) | `(3043, "Backend Engineer", "Epsilon Group", ..., 6.4)` and `(3102, "Backend Engineer", "Epsilon Group", ..., 6.4)` | `duplicated(subset=business_keys)` |
+
+The exact-duplicate detector finds 8 of 14 — it cannot see logical duplicates because their `job_id` differs. The subset-aware detector finds all 14. This is the difference between *"are these literally the same row"* and *"do these represent the same business entity"*.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.35 — Identifying and Removing Duplicate Records."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+BUSINESS_KEYS = ["job_title", "company", "sector", "salary_lpa", "date_posted"]
+
+
+def duplicate_mask(frame: pd.DataFrame, subset=None) -> pd.Series:
+    """duplicated() -- True where the row matches an earlier row."""
+    return frame.duplicated(subset=subset)
+
+
+def duplicate_groups(frame: pd.DataFrame, subset: list[str]) -> pd.DataFrame:
+    """Return all rows that participate in any duplicate group (incl. the first
+    occurrence) -- handy for inspection before deciding to drop."""
+    mask = frame.duplicated(subset=subset, keep=False)
+    return frame[mask].sort_values(subset).reset_index(drop=True)
+
+
+def drop_exact_duplicates(frame: pd.DataFrame, keep="first") -> pd.DataFrame:
+    """Drop byte-identical duplicate rows."""
+    return frame.drop_duplicates(keep=keep)
+
+
+def drop_by_subset(
+    frame: pd.DataFrame, subset: list[str], keep="first"
+) -> pd.DataFrame:
+    """Drop logical duplicates -- rows that match on `subset`, ignoring others."""
+    return frame.drop_duplicates(subset=subset, keep=keep)
+
+
+def drop_all_duplicate_rows(frame: pd.DataFrame, subset=None) -> pd.DataFrame:
+    """keep=False drops every row that participates in a duplicate group."""
+    return frame.drop_duplicates(subset=subset, keep=False)
+```
+
+### Explanation of Each Step
+
+#### 1. Detection: `duplicated()` boolean mask
+
+```python
+frame.duplicated()                             # mask of exact duplicates
+frame.duplicated(subset=business_keys)         # mask of logical duplicates
+frame.duplicated(subset=business_keys, keep=False)  # flag ALL group members
+```
+
+`duplicated()` returns a same-length boolean Series — `True` for every row that matches an *earlier* row. The default is `keep="first"`, meaning the first occurrence is kept (flagged `False`) and every later copy is flagged `True`. `keep=False` is the inspection mode: every row in a duplicate group is flagged, including the original, so you can pull the whole pair/triple out for review.
+
+#### 2. Counting
+
+```python
+frame.duplicated().sum()                       # 8 exact duplicates here
+frame.duplicated(subset=business_keys).sum()   # 14 logical (8 exact + 6 re-posts)
+```
+
+The count tells you how lossy the cleaning step will be *before* you commit. On this frame: 8 exact, 6 logical, 14 total — meaning the cleaned shape will be `(100, 7)` from `(114, 7)`, a 12% reduction.
+
+#### 3. Removal: three `keep` modes
+
+```python
+frame.drop_duplicates(keep="first")    # default — preserves earliest record
+frame.drop_duplicates(keep="last")     # preserves latest (corrected?) record
+frame.drop_duplicates(keep=False)      # drops ALL members of a duplicate group
+```
+
+| Mode | Result here | Use it when |
+|---|---|---|
+| `"first"` | `(106, 7)` | Default; first record is canonical |
+| `"last"` | `(106, 7)` | Later rows have corrected / more recent info |
+| `False` | `(98, 7)` | Duplicate signals corruption; trust no copy |
+
+#### 4. Subset removal — collapsing logical duplicates
+
+```python
+frame.drop_duplicates(subset=business_keys)
+```
+
+`subset=` is the only way to catch logical duplicates — those rows where `job_id` differs but every business field matches. On this frame: 114 → 100 rows, removing both the 8 exact *and* the 6 logical duplicates in one call. The 6 logical removals are the difference between exact and subset dedup; without `subset`, they survive.
+
+#### 5. Verification — shape + integrity check
+
+```python
+cleaned = frame.drop_duplicates(subset=business_keys)
+assert cleaned.shape[0] == 100
+assert cleaned["job_id"].is_unique
+assert not cleaned.duplicated(subset=business_keys).any()
+```
+
+A dedup step without verification is hope, not engineering. Three checks:
+
+- **Shape** — did we remove the expected number of rows?
+- **Primary-key integrity** — is the natural key (`job_id`) actually unique now?
+- **Residual duplicates** — does another `duplicated()` call still return any `True`?
+
+If any of these fails, the dedup logic is wrong and the rest of the pipeline will inherit the error.
+
+### Sample Output (excerpt)
+
+```
+1) duplicated().sum()                           -> 8     (exact)
+2) duplicated(subset=business_keys).sum()       -> 14    (8 exact + 6 logical)
+
+   Logical duplicate pair example:
+     job_id  job_title         company        sector       salary_lpa
+     3043    Backend Engineer  Epsilon Group  Healthcare   6.4
+     3102    Backend Engineer  Epsilon Group  Healthcare   6.4    <- different id, same job
+
+3) drop_duplicates(keep='first')                shape=(106, 7)  residual=0
+   drop_duplicates(keep='last')                 shape=(106, 7)  residual=0
+   drop_duplicates(keep=False)                  shape=(98,  7)  residual=0
+
+4) drop_duplicates(subset=business_keys)        shape=(100, 7)  residual=0
+   Source rows: 114 -> after subset dedup: 100  (removed 14)
+
+5) Verification:
+   source.shape       = (114, 7)
+   cleaned.shape      = (100, 7)
+   rows_removed       = 14  (expected = 14)
+   job_id is unique?  = True
+   cleaned.duplicated(subset=keys).any() = False  (must be False)
+```
+
+### Dedup Cheat Sheet
+
+```
+frame.duplicated()                          -> mask of exact dupes
+frame.duplicated(subset=cols)               -> mask by subset
+frame.duplicated(keep=False)                -> flag ALL group members
+frame.duplicated().sum()                    -> count
+frame.drop_duplicates()                     -> default keep='first'
+frame.drop_duplicates(keep='last')          -> keep latest copy
+frame.drop_duplicates(keep=False)           -> drop entire dupe groups
+frame.drop_duplicates(subset=cols)          -> by subset (logical dedup)
+frame['key'].is_unique                      -> integrity assertion
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/dedup_records.py
+python3 -m black src/dedup_records.py
+python3 -m ruff check src/dedup_records.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Calling `drop_duplicates()` with default args and assuming all dupes are gone | Logical duplicates (different IDs) survive |
+| Including `job_id` in the subset | Logical re-posts cannot be detected; nothing collapses |
+| Using `keep=False` as the default | Originals get dropped along with duplicates; data loss without intent |
+| Skipping the post-dedup integrity check | Silent bugs in the dedup logic propagate downstream |
+| Sorting before dedup but forgetting `keep="last"` | Wrong row preserved when you wanted the latest |
+| Demoing on a frame with no duplicates | The lesson cannot show what `duplicated()` actually finds |
+| Assuming `duplicated()` and `duplicated(keep=False)` count the same | They differ by exactly the count of "first occurrence" rows in groups |
+
+### Conclusion
+
+Deduplication is two questions, not one. *"Are these literally the same row?"* is answered by `duplicated()`; *"do these represent the same business entity?"* requires a `subset=` argument that names the natural key. Both questions matter — and the verification step at the end (shape, primary-key uniqueness, residual count) is what turns the cleaning step from *hope* into a checked invariant for everything that follows.
+
+---
+
+## Assignment 4.36 — Standardizing Column Names and Data Formats
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+The single biggest source of avoidable bugs in a Pandas pipeline is inconsistent labels and inconsistent casing. A column named `"Job Title"` and a column named `"job_title"` look identical to a human and are completely different to the framework. A sector encoded as `"Technology"` in some rows, `"TECHNOLOGY"` in others, and `"  technology "` in a few will produce three "different" groups when you call `groupby("sector")` — and a wrong analysis.
+
+Standardisation is the cleaning step that erases these *cosmetic* differences so downstream code can treat semantically-equal values as equal. Four targets:
+
+1. **Column names** — `snake_case`, no spaces, no special characters
+2. **Categorical text** — strip + lowercase + canonical alias map
+3. **Numeric formats** — strip currency / commas, coerce to float
+4. **Date formats** — mixed `YYYY-MM-DD` / `DD/MM/YYYY` → `datetime64[ns]`
+
+### File Name
+
+`src/standardize_data.py`
+
+### Why Demoing on a Tidy CSV Is Pointless
+
+The bundled CSV's column names are already snake_case, dates already parse, sector values are already canonical. The standardiser running on it is a no-op. To make the lesson real, the script generates a **60-row deliberately dirty frame**:
+
+| Surface | Variants seeded in |
+|---|---|
+| **Column names** | `"Job ID"`, `"Job  Title"` (double space), `"Sector!"`, `" EXPERIENCE_YEARS "`, `"Salary (LPA)"`, `"Date Posted"` |
+| **Sector values** | `"Technology"`, `"TECHNOLOGY"`, `"  technology "`, `"Tech"`, `"tech."`, `"Finance"`, `"  fin "`, `"health"`, `"mfg"`, `"MFG"`, `"Retail"` … (16 distinct surface forms) |
+| **Job titles** | Mixed case, leading/trailing whitespace, `"  Data  Analyst  "` (double internal space) |
+| **Salary values** | Half are bare floats (`"7.5"`), half currency strings (`"$21.2"`) |
+| **Date values** | Half `YYYY-MM-DD`, half `DD/MM/YYYY` |
+
+After standardisation: column names all `snake_case`, `sector.nunique()` collapses **16 → 5**, salary becomes `Float64` (arithmetic works), dates become `datetime64[ns]` (`.dt` accessor works).
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.36 — Standardizing Column Names and Data Formats."""
+
+from __future__ import annotations
+import re
+import numpy as np
+import pandas as pd
+
+
+CANONICAL_SECTORS = ("technology", "finance", "healthcare", "retail", "manufacturing")
+SECTOR_ALIASES = {
+    "tech": "technology", "tech.": "technology", "it": "technology",
+    "fin": "finance", "health": "healthcare", "mfg": "manufacturing",
+}
+
+_NON_ALPHANUMERIC = re.compile(r"[^0-9a-z]+")
+
+
+def standardize_columns(frame: pd.DataFrame) -> pd.DataFrame:
+    """strip + lower + collapse non-[a-z0-9] runs to '_' + trim '_'."""
+    def normalise(name: str) -> str:
+        lowered = name.strip().lower()
+        return _NON_ALPHANUMERIC.sub("_", lowered).strip("_")
+    return frame.rename(columns={c: normalise(c) for c in frame.columns})
+
+
+def standardize_text(series: pd.Series, aliases=None) -> pd.Series:
+    """strip + collapse internal whitespace + lowercase + alias map."""
+    cleaned = (
+        series.astype("string")
+        .str.strip()
+        .str.replace(r"[.\s]+", " ", regex=True)
+        .str.strip()
+        .str.lower()
+    )
+    return cleaned.replace(aliases) if aliases else cleaned
+
+
+def standardize_numeric(series: pd.Series) -> pd.Series:
+    """strip $ and , then pd.to_numeric(errors='coerce')."""
+    cleaned = (
+        series.astype("string")
+        .str.replace("$", "", regex=False)
+        .str.replace(",", "", regex=False)
+        .str.strip()
+    )
+    return pd.to_numeric(cleaned, errors="coerce")
+
+
+def standardize_dates(series: pd.Series) -> pd.Series:
+    """Try YYYY-MM-DD; fall back to DD/MM/YYYY for any rows that didn't match."""
+    iso = pd.to_datetime(series, format="%Y-%m-%d", errors="coerce")
+    eu = pd.to_datetime(series, format="%d/%m/%Y", errors="coerce")
+    return iso.fillna(eu)
+
+
+def apply_full_recipe(frame: pd.DataFrame) -> pd.DataFrame:
+    """Column-name + value standardisation in one call."""
+    standardised = standardize_columns(frame).copy()
+    standardised["job_title"] = standardize_text(standardised["job_title"])
+    standardised["sector"] = standardize_text(
+        standardised["sector"], aliases=SECTOR_ALIASES
+    )
+    standardised["salary_lpa"] = standardize_numeric(standardised["salary_lpa"])
+    standardised["date_posted"] = standardize_dates(standardised["date_posted"])
+    return standardised
+```
+
+### Explanation of Each Step
+
+#### 1. Column-name standardisation
+
+```python
+"Job ID"              -> "job_id"
+"Job  Title"          -> "job_title"      # double space collapsed
+"Sector!"             -> "sector"         # special char dropped
+"Salary (LPA)"        -> "salary_lpa"     # parens replaced by '_'
+" EXPERIENCE_YEARS "  -> "experience_years"
+"Date Posted"         -> "date_posted"
+```
+
+The recipe is purely lexical: strip, lowercase, replace any run of non-alphanumeric characters with a single underscore, then trim leading/trailing underscores. This is reversible only by hand — it cannot infer that `"DOB"` should expand to `"date_of_birth"`. For semantic renames, follow up with an explicit `frame.rename(columns={...})`.
+
+#### 2. Categorical text — strip + lowercase + alias map
+
+```python
+sector value counts BEFORE     after standardize_text+aliases:
+  Technology       8                    technology     14
+  TECHNOLOGY       4                    finance        12
+  "  technology "  2                    manufacturing  10
+  Tech             4                    retail         12
+  tech.            2                    healthcare     12
+  Finance          5
+  FINANCE          4                    Distinct: 16 -> 5
+  "  fin "         3
+  Healthcare       4
+  ... (16 surface forms)
+```
+
+The lexical step (`strip + lowercase`) closes the case-and-whitespace variants. The alias map (`{"tech": "technology", ...}`) closes the **abbreviation** variants — those are *semantic* equivalences that no purely-lexical rule can detect. The combination collapses 16 surface forms onto the 5 canonical sectors, which is what every downstream `groupby("sector")` will rely on.
+
+#### 3. Numeric — strip currency, coerce to float
+
+```python
+before -> ['$21.2', '7.5', '10.8', '$45.1', '6.7']
+after  -> [21.2, 7.5, 10.8, 45.1, 6.7]   # Float64
+
+salary dtype: object -> Float64
+salary_clean.sum() -> 732.50   # arithmetic now works
+```
+
+`pd.to_numeric(errors="coerce")` is the canonical workhorse — anything unparseable becomes `NaN` instead of raising, so the whole step is deterministic. The string-strip pass beforehand removes the currency prefix and any thousands separator that would block parsing.
+
+#### 4. Dates — fall-through parse for mixed formats
+
+```python
+before -> ['2024-01-07', '04/05/2024', '2024-03-17', '25/04/2024']
+after  -> [Timestamp('2024-01-07'), Timestamp('2024-05-04'),
+           Timestamp('2024-03-17'), Timestamp('2024-04-25')]
+
+unparseable rows -> 0
+```
+
+The trick is to parse with `format="%Y-%m-%d"` first (NaT for everything that doesn't match), then `fillna()` from a second parse with `format="%d/%m/%Y"`. The result is a single `datetime64[ns]` Series — anything that matched neither format remains `NaT`, which is the right signal for "this date string is genuinely broken."
+
+Letting `pd.to_datetime` infer formats without `format=` works on small frames but is dangerous: it may guess differently for different rows, silently converting `04/05/2024` as April-5 in some rows and May-4 in others. **Always pass `format=`** when you know the format(s).
+
+### Sample Output (excerpt)
+
+```
+1) Column names — before vs after:
+  ['Job ID', 'Job  Title', 'Sector!', ' EXPERIENCE_YEARS ', 'Salary (LPA)', 'Date Posted']
+  -> ['job_id', 'job_title', 'sector', 'experience_years', 'salary_lpa', 'date_posted']
+
+2) sector value counts after standardisation:
+  technology       14
+  finance          12
+  manufacturing    10
+  retail           12
+  healthcare       12
+  Distinct: 16 -> 5
+
+3) Salary: object -> Float64;   salary_clean.sum() = 732.50
+4) Date:   object -> datetime64[ns];   0 unparseable rows
+
+5) Cleaned head(5):
+   job_id  job_title         sector         experience_years  salary_lpa  date_posted
+   4001    data scientist    technology     3                 21.2        2024-01-07
+   4002    backend engineer  manufacturing  7                 7.5         2024-05-04
+   4003    ml engineer       manufacturing  2                 10.8        2024-03-17
+   4004    data analyst      finance        11                45.1        2024-04-25
+   4005    data scientist    technology     6                 6.7         2024-02-17
+
+   Cleaned dtypes:
+     job_id              int64
+     job_title           string
+     sector              string
+     experience_years    int64
+     salary_lpa          Float64
+     date_posted         datetime64[ns]
+```
+
+### Standardisation Cheat Sheet
+
+```
+COLUMN NAMES
+  frame.rename(columns=normalise)
+    where normalise(name) =
+      strip + lower + non-alnum -> '_' + trim '_'
+
+TEXT VALUES
+  series.str.strip().str.replace(r"[.\s]+", " ", regex=True).str.strip().str.lower()
+  then .replace(alias_map)
+
+NUMERIC
+  series.str.replace("$", "").str.replace(",", "")
+  pd.to_numeric(..., errors="coerce")
+
+DATES
+  pd.to_datetime(..., format="%Y-%m-%d", errors="coerce")
+    .fillna(pd.to_datetime(..., format="%d/%m/%Y", errors="coerce"))
+
+RULE OF THUMB
+  Keep an explicit alias dict for categorical canonicalisation;
+  purely-lexical normalisation cannot infer 'IT' == 'Technology'.
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/standardize_data.py
+python3 -m black src/standardize_data.py
+python3 -m ruff check src/standardize_data.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Letting `pd.to_datetime` infer format without `format=` | `04/05/2024` parsed as April-5 in some rows, May-4 in others |
+| Skipping the alias map for categoricals | `"tech"` and `"technology"` survive as separate groups |
+| Stripping whitespace but not collapsing internal double-spaces | `"  Data  Analyst  "` and `"Data Analyst"` stay distinct |
+| Using `regex=True` on `str.replace("$", "")` | `$` is a regex anchor — accidentally matches end-of-string |
+| Standardising column names by hand for every frame | Drift across notebooks; a one-line `standardize_columns()` is reusable |
+| Demoing only on a clean CSV | The standardiser is a no-op; the lesson reads as theoretical |
+
+### Conclusion
+
+Standardisation is the cleaning step that lets every later operation assume *equal-looking values are equal*. Without it, `groupby("sector")` invents groups, joins miss rows, and aggregates double-count. The four-target recipe — columns, text, numerics, dates — covers virtually every real-world inconsistency you'll meet at the disk-to-frame boundary, and the alias map is what closes the long tail of "same thing, different word" cases that purely-lexical rules can't.
+
+---
+
+## Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Summary statistics are the first quantitative read of a numeric column. Five small numbers — `count`, `mean`, `std`, `min`, `max` — plus the quartiles tell you most of what you need to know about how a column behaves *before* you reach for a chart or a model.
+
+The trick is that the *same set of statistics says different things depending on the column's distribution shape*. A right-skewed column has `mean > median`. A heavy-tailed column has `std` much larger than `IQR`. A uniform column has `mean ≈ median`. The lesson is incomplete if you only run `describe()` once on one column.
+
+### File Name
+
+`src/column_stats.py`
+
+### Why Five Distributions in One Frame
+
+A single column can only tell one story. The script generates a 150-row synthetic frame with **five numeric columns each shaped on purpose** so all the statistics get to demonstrate something:
+
+| Column | Distribution | Expected statistical fingerprint |
+|---|---|---|
+| `salary_lpa` | Lognormal (μ=2.4, σ=0.5) | Right-skewed; `mean > median`; std inflated by tail |
+| `experience_years` | Uniform integer [0, 12) | Symmetric; `mean ≈ median`; std/IQR near 0.74 |
+| `applications_received` | Poisson (λ=8) | Mildly right-skewed counts; floor at 0 |
+| `interview_score` | Normal (μ=8.0, σ=1.2), clipped to [1, 10] | Symmetric, bounded; low spread |
+| `commute_minutes` | Exponential (scale=35) | Heavy right tail; `std >> IQR` |
+
+A single demo frame, five different stories — exactly what a student needs to see *what each statistic means in practice*.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.37 — Computing Basic Summary Statistics for Individual Columns."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def column_quartiles(series: pd.Series) -> tuple[float, float, float]:
+    """25th / 50th / 75th percentiles. Q2 (50%) is the median."""
+    q1 = float(series.quantile(0.25))
+    q2 = float(series.quantile(0.50))
+    q3 = float(series.quantile(0.75))
+    return q1, q2, q3
+
+
+def column_iqr(series: pd.Series) -> float:
+    """Inter-quartile range = Q3 - Q1. Robust spread (not pulled by outliers)."""
+    q1, _, q3 = column_quartiles(series)
+    return q3 - q1
+
+
+def column_skewness_hint(series: pd.Series) -> str:
+    """Mean-vs-median gap as a one-word direction."""
+    mean, median = float(series.mean()), float(series.median())
+    if mean - median > 0.05 * abs(median + 1e-9):
+        return "right-skewed"
+    if median - mean > 0.05 * abs(median + 1e-9):
+        return "left-skewed"
+    return "roughly symmetric"
+
+
+def per_column_summary(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """One row per column: count, min, max, mean, median, std, iqr, shape."""
+    rows = []
+    for column in columns:
+        series = frame[column]
+        q1, q2, q3 = column_quartiles(series)
+        rows.append({
+            "column": column,
+            "count": int(series.count()),
+            "min": float(series.min()),
+            "max": float(series.max()),
+            "mean": round(float(series.mean()), 2),
+            "median": round(q2, 2),
+            "std": round(float(series.std()), 2),
+            "iqr": round(q3 - q1, 2),
+            "shape": column_skewness_hint(series),
+        })
+    return pd.DataFrame(rows).set_index("column")
+```
+
+### Explanation of Each Statistic
+
+#### Single-column deep dive — `salary_lpa`
+
+```
+count                         150.00
+min                             3.30 LPA
+max                            44.10 LPA
+range  (max - min)             40.80 LPA
+mean                           12.79 LPA
+median (Q2)                    12.00 LPA
+Q1 (25%)                        8.30 LPA
+Q3 (75%)                       15.98 LPA
+IQR (Q3 - Q1)                   7.68 LPA
+std                             7.51 LPA
+variance                       56.40 LPA²
+```
+
+Two reads:
+
+- **`mean (12.79) > median (12.00)`** — `+0.79` gap, so `right-skewed`. A few high earners pull the mean up while the median (the typical row) stays lower.
+- **`std (7.51) ≈ IQR (7.68)`** — std/IQR ratio of `0.98` is well above the symmetric-distribution fingerprint of `0.74`. That's the standard sign of a long right tail inflating the std.
+
+#### Cross-column comparison
+
+```
+                       count    min    max   mean  median    std   iqr            shape
+column
+salary_lpa             150    3.3    44.1  12.79  12.00   7.51   7.68   right-skewed
+experience_years       150    0.0    11.0   5.47   6.00   3.22   5.00   left-skewed
+applications_received  150    2.0    16.0   7.93   8.00   2.82   4.00   roughly symmetric
+interview_score        150    4.4    10.0   7.82   7.95   1.15   1.38   roughly symmetric
+commute_minutes        150    0.0   207.0  39.86  32.00  36.29  51.75   right-skewed
+```
+
+#### Mean-vs-median gap as a skewness scanner
+
+```
+                        mean  median              shape    gap
+column
+salary_lpa             12.79   12.00       right-skewed   0.79
+experience_years        5.47    6.00        left-skewed  -0.53
+applications_received   7.93    8.00  roughly symmetric  -0.07
+interview_score         7.82    7.95  roughly symmetric  -0.13
+commute_minutes        39.86   32.00       right-skewed   7.86
+```
+
+A single `gap = mean - median` column scans every numeric variable for skew at a glance. `commute_minutes` jumps out with a `+7.86` gap — the heavy right tail is pulling the mean far above the typical commute.
+
+#### `std` vs `IQR` — robust-vs-tail-sensitive spread
+
+| Column | std | IQR | std/IQR ratio | Read |
+|---|---:|---:|---:|---|
+| salary_lpa | 7.51 | 7.68 | 0.98 | std inflated by long tail; trust IQR |
+| experience_years | 3.22 | 5.00 | 0.64 | symmetric; std and IQR agree |
+| applications_received | 2.82 | 4.00 | 0.70 | symmetric-ish (Poisson) |
+| interview_score | 1.15 | 1.38 | 0.83 | mostly symmetric, slight tail |
+| commute_minutes | 36.29 | 51.75 | 0.70 | heavy right tail |
+
+A normal distribution has `std ≈ 0.74 × IQR`. Ratios well above `0.74` indicate the std is being inflated by outliers and the IQR is the more honest spread; ratios below mean the column is more concentrated than normal-shaped.
+
+#### Ranking columns by IQR
+
+```
+                       mean    iqr              shape
+column
+commute_minutes       39.86   51.75   right-skewed       <- most volatile
+salary_lpa            12.79    7.68   right-skewed
+experience_years       5.47    5.00   left-skewed
+applications_received  7.93    4.00   roughly symmetric
+interview_score        7.82    1.38   roughly symmetric  <- most concentrated
+```
+
+IQR ranking answers *"how spread out is the typical row?"* — more honest than ranking by std when distributions are skewed.
+
+### Statistics Cheat Sheet
+
+```
+COUNT / RANGE
+  series.count()                -> non-null count
+  series.min(), series.max()    -> range endpoints
+  series.max() - series.min()   -> range
+CENTRAL TENDENCY
+  series.mean()                 -> arithmetic average (outlier-sensitive)
+  series.median()               -> middle value (outlier-robust)
+SPREAD
+  series.std()                  -> standard deviation (outlier-sensitive)
+  series.var()                  -> variance (in squared units)
+  series.quantile([.25,.5,.75]) -> quartiles
+  Q3 - Q1                       -> IQR (outlier-robust)
+DISTRIBUTION SHAPE READ
+  mean - median                 -> sign tells skew direction
+  std / iqr                     -> ~0.74 = symmetric, >0.74 = heavy-tailed
+ALL AT ONCE
+  series.describe()             -> count + mean + std + min + 25/50/75 + max
+WHEN TO PREFER WHICH
+  symmetric distribution        -> mean + std are fine
+  skewed / heavy-tailed         -> median + IQR are more honest
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/column_stats.py
+python3 -m black src/column_stats.py
+python3 -m ruff check src/column_stats.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Reporting only `mean` on a skewed column | Misleads the reader about the typical value; median is more representative |
+| Using `std` to rank columns by spread | Heavy-tailed columns look more variable than they actually are at the typical-row level |
+| Treating `min` / `max` as descriptive without sanity-checking | Negative ages, `salary_lpa = 0` are usually data-quality bugs, not features |
+| Forgetting that `interview_score` was clipped | min/max appear bounded only because of a hard clip — easy to over-interpret |
+| Demoing on one column | Every distribution behaves differently; the lesson needs contrast across columns |
+| Skipping the median entirely | The mean alone doesn't reveal skew; you need both numbers to read shape |
+
+### Conclusion
+
+`mean` and `median` are not interchangeable; `std` and `IQR` are not interchangeable. Picking the right one depends on what the column's distribution actually looks like — and the cheapest way to find that out is to look at both pairs side by side. The five-distribution demo here turns that habit into reflex: a quick scan of `(mean, median, gap, std, iqr, ratio)` per column tells you which features are well-behaved (symmetric, low spread) and which need careful handling later (heavy-tailed, skewed) before any aggregation or modelling step.
+
+---
+
+## Assignment 4.38 — Comparing Distributions Across Multiple Columns
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+4.37 computed every statistic on five differently-shaped columns side by side. This assignment goes one step further: it *compares* those distributions, both **across columns** and **across groups within a column**. Comparison is what turns a per-column summary into an insight.
+
+Two kinds of comparison are demonstrated, each with its own toolkit:
+
+- **A) Across columns (different units)** — std on `salary_lpa` and std on `commute_minutes` are not comparable directly because LPA and minutes are different units. Unit-free metrics are needed: **coefficient of variation** (`CV = std / mean`) and **z-score normalisation**.
+- **B) Across groups within one column (same units)** — per-sector salary, per-role experience. The *real* comparisons that surface stories. `groupby` + central tendency + spread + a robust anomaly flag.
+
+### File Name
+
+`src/compare_distributions.py`
+
+### Why a Sector-Conditioned Frame
+
+The 200-row synthetic frame **conditions salary on sector** so per-group comparisons surface real differences:
+
+| Sector | Lognormal μ | Lognormal σ | Expected behaviour |
+|---|---:|---:|---|
+| Technology | 2.7 | 0.45 | Higher mean, moderate spread |
+| Finance | 2.6 | 0.55 | High mean, **wider spread** |
+| Healthcare | 2.3 | 0.35 | Mid mean, **tight spread** |
+| Retail | 2.0 | 0.30 | Lower mean, very tight |
+| Manufacturing | 2.1 | 0.40 | Lower mean, slightly wider |
+
+Without this conditioning, `groupby("sector")["salary_lpa"]` would just return five samples from the same distribution and the comparison would be noise.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.38 — Comparing Distributions Across Multiple Columns."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def coefficient_of_variation(series: pd.Series) -> float:
+    """Unit-free spread metric: std / mean."""
+    mean = float(series.mean())
+    return float("nan") if mean == 0 else float(series.std()) / mean
+
+
+def z_score_frame(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """Standardise each column to mean=0, std=1 so columns share a common scale."""
+    return frame[columns].apply(lambda s: (s - s.mean()) / s.std())
+
+
+def per_group_summary(
+    frame: pd.DataFrame, group_col: str, target: str
+) -> pd.DataFrame:
+    """Per-group mean / median / std / IQR / gap (mean - median)."""
+    grouped = frame.groupby(group_col, observed=True)[target]
+    summary = pd.DataFrame({
+        "count": grouped.count(),
+        "mean": grouped.mean().round(2),
+        "median": grouped.median().round(2),
+        "std": grouped.std().round(2),
+        "iqr": (grouped.quantile(0.75) - grouped.quantile(0.25)).round(2),
+    })
+    summary["gap"] = (summary["mean"] - summary["median"]).round(2)
+    return summary.sort_values("median", ascending=False)
+
+
+def flag_anomalous_groups(
+    per_group: pd.DataFrame, std_multiplier: float = 1.5
+) -> pd.Series:
+    """MAD-based outlier flag for groups whose mean is far from peer median.
+    Robust against any single extreme group pulling the threshold to itself."""
+    means = per_group["mean"]
+    median_of_means = means.median()
+    mad = (means - median_of_means).abs().median()
+    if mad == 0:
+        return pd.Series(["typical"] * len(means), index=means.index)
+    distance = (means - median_of_means).abs() / mad
+    return distance.where(distance >= std_multiplier).map(
+        lambda d: "anomalous" if pd.notna(d) else "typical"
+    )
+```
+
+### Explanation of Each Comparison Tool
+
+#### A1) Cross-column CV ranking — unit-free spread
+
+```
+                          mean  median   std    iqr    cv
+column
+commute_minutes          37.50  29.00  35.04  44.50  0.935    <- most variable
+salary_lpa               11.96   9.65   7.00   8.41  0.585    <-   relative to its mean
+applications_received     8.06   8.00   2.83   4.00  0.351
+interview_score           7.90   7.90   1.18   1.43  0.150
+experience_years          5.42   5.00   3.42   6.00  0.631
+```
+
+Picking std alone, `commute_minutes` (35.0) towers over `interview_score` (1.18). But minutes and a 1–10 score live on different scales — the comparison is meaningless. CV (`std/mean`) is unit-free and gives the actual relative-volatility ranking: commute is 6× as variable as interview score *relative to its own scale*.
+
+#### A2) Z-score normalisation — common scale for cross-column outliers
+
+```
+                       z_min  z_max  z_range
+column
+commute_minutes        -1.07   6.27     7.34   <- heavy right tail
+salary_lpa             -0.94   4.13     5.07
+applications_received  -1.43   2.81     4.24
+experience_years       -1.59   1.63     3.22
+interview_score        -3.31   1.78     5.09   <- left tail from clipping
+```
+
+After standardisation, every value is "how many std away from the column's mean." A normal distribution rarely produces values past ±3; columns whose `z_range` exceeds ~6 are heavier-tailed than normal. `commute_minutes` reaches **6.27 std above its mean** — that's the heavy-right-tail fingerprint of an exponential.
+
+#### B1) Per-sector salary distribution — same column, different groups
+
+```
+                count   mean  median   std    iqr   gap
+sector
+Technology       30   17.13   15.45   8.53   8.23   1.68
+Finance          40   17.43   14.60   9.14  12.00   2.83   <- highest spread
+Healthcare       44   10.13    9.40   3.94   4.80   0.73
+Manufacturing    36    9.59    9.25   3.16   4.80   0.34
+Retail           50    7.81    8.05   1.73   2.27  -0.24   <- tightest
+```
+
+Reading: Finance and Technology pay the highest median salaries — but Finance has an IQR of `12.00` versus Technology's `8.23`, meaning Finance pay is **much more spread out** even though the medians are close. Reporting only "median salary by sector" hides that story; reporting both centre and spread surfaces it.
+
+#### B2) MAD-based anomaly flag
+
+```
+                count   mean   median   std    iqr   gap     verdict
+sector
+Technology       30   17.13   15.45   8.53   8.23  1.68   anomalous
+Finance          40   17.43   14.60   9.14  12.00  2.83   anomalous
+Healthcare       44   10.13    9.40   3.94   4.80  0.73   typical
+Manufacturing    36    9.59    9.25   3.16   4.80  0.34   typical
+Retail           50    7.81    8.05   1.73   2.27 -0.24   typical
+```
+
+Method: compute `|sector_mean - median(all sector means)| / MAD`. Flag groups whose distance ≥ 1.5. Using MAD (median absolute deviation) instead of std makes the threshold robust — if you used std, the outlier groups themselves would inflate the std and hide.
+
+#### C) Paired column comparison — sometimes std is wrong, CV is right
+
+```
+        interview_score  salary_lpa
+mean              7.902      11.962
+median            7.900       9.650
+std               1.185       6.999
+cv                0.150       0.585
+```
+
+`salary.std (6.99)` is much bigger than `interview.std (1.18)` — but `salary.cv (0.585)` is almost 4× `interview.cv (0.150)`. Salary is **genuinely more variable as a fraction of its scale**, regardless of unit. The std comparison agrees with the CV comparison here, but on different units it wouldn't have to.
+
+#### D) Robust spread: `P95 - P5` instead of `max - min`
+
+```
+                        p5     p95   robust_range  full_range  tail_inflation
+column
+commute_minutes        2.0  106.10   104.10        257.0        2.47   <- heavy tails
+salary_lpa             5.6   28.45    22.85         40.9        1.79
+applications_received  4.0   14.00    10.00         16.0        1.60
+interview_score        6.0   10.00     4.00          5.2        1.30
+experience_years       0.0   11.00    11.00         11.0        1.00   <- bounded uniform
+```
+
+`tail_inflation = (max - min) / (P95 - P5)`. A value near 1 means the full range is essentially the middle-90% range; values much greater than 1 mean a few extreme observations sit far beyond the bulk. `commute_minutes` at 2.47 is the canonical heavy-tail offender.
+
+### Comparison Cheat Sheet
+
+```
+ACROSS COLUMNS (different units)
+  coefficient of variation:   series.std() / series.mean()
+  z-score normalisation:      (series - series.mean()) / series.std()
+
+ACROSS GROUPS (same units)
+  grouped = frame.groupby(g)[c]
+  grouped.mean() / .median() / .std() / .quantile([.25, .5, .75])
+  median - across - groups + MAD = robust outlier detection
+
+ROBUST RANGE
+  P95 - P5 instead of max - min (ignores extreme tails)
+
+RULES OF THUMB
+  1. Comparing std across different units is wrong; use CV.
+  2. Comparing groups by mean alone hides the spread story; report
+     centre AND spread together.
+  3. Heavy-tailed columns: median + IQR + (P95 - P5) instead of
+     mean + std + (max - min).
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/compare_distributions.py
+python3 -m black src/compare_distributions.py
+python3 -m ruff check src/compare_distributions.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Comparing `std` across columns of different units | Meaningless ranking; use CV (`std/mean`) instead |
+| Reporting per-group means without per-group spread | Misses the "Finance pays well *but* spreads pay widely" story |
+| Using `mean ± std` to flag anomalous groups | One extreme group pulls the std to itself; threshold becomes blind to it |
+| Using `max - min` as the spread headline | A single outlier dominates; `P95 - P5` is more honest |
+| Comparing distributions on a frame where groups *don't* differ | Per-group output is noise; nothing to surface |
+| Z-scoring without `from __future__ import annotations` and Pandas-aware lambdas | Subtle dtype quirks; the helper here does it cleanly |
+
+### Conclusion
+
+Comparison is the step that turns "we computed some statistics" into "we found a story." Two questions matter — *across columns* (handled with CV / z-score) and *across groups within a column* (handled with `groupby` + per-group summary + MAD-based anomaly flag). Both report **centre and spread together**, and both prefer robust metrics (median, IQR, P95−P5, MAD) when the underlying distribution is skewed or heavy-tailed. Once these comparisons are routine, the visualisation work that follows (4.39 histograms, 4.40 boxplots, 4.42 scatter, 4.43 outlier detection) is mostly *picturing* what the numbers already said.
 
 ---
 
