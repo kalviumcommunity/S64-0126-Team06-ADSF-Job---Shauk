@@ -37,6 +37,7 @@
 - [Assignment 4.29 — Loading CSV Data into Pandas DataFrames](#assignment-429--loading-csv-data-into-pandas-dataframes)
 - [Assignment 4.30 — Inspecting DataFrames Using head(), info(), and describe()](#assignment-430--inspecting-dataframes-using-head-info-and-describe)
 - [Assignment 4.31 — Understanding Data Shapes and Column Data Types](#assignment-431--understanding-data-shapes-and-column-data-types)
+- [Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing](#assignment-432--selecting-rows-and-columns-using-indexing-and-slicing)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -5031,6 +5032,221 @@ python3 -m ruff check src/dataframe_shape_types.py
 ### Conclusion
 
 Shape and types are the blueprint of the dataset — every later cleaning, joining, modelling, or visualisation operation depends on getting them right. Running `frame.shape` and `frame.dtypes` immediately after `frame.head()` (4.30) takes ten seconds and prevents the most common class of silent analysis bugs. The tidy-vs-messy contrast in this assignment makes both the diagnostic step and the repair recipe concrete: you can see the lie in the dtype vector and you can see the arithmetic light up after the repair.
+
+---
+
+## Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+After loading (4.29), inspecting (4.30), and confirming shape + types (4.31), every workflow's next move is to *extract a subset*: "give me only the Finance postings", "give me the salary column", "give me the first ten rows for the demo." How that selection is written determines whether the result is the rows you wanted, the rows next to them, or a silent `SettingWithCopyWarning` that breaks later writes.
+
+### File Name
+
+`src/select_rows_columns.py`
+
+### Why a Label Index Matters for the Demo
+
+The script generates a 50-row synthetic frame and **sets `job_id` as the index** (with values starting at `1001`, not `0`). That single decision is what makes `iloc` and `loc` *visibly* different — with a default `RangeIndex(0, N)`, position `0` and label `0` collide and the lesson is invisible. Here `iloc[0]` returns the first row by *position*, while `loc[1001]` returns the same row by *label* — and `loc[1003]` is the third one without you having to count.
+
+### Seven Selection Patterns
+
+| # | Pattern | Returns | Key fact |
+|---|---|---|---|
+| 1 | `df["col"]` | `Series` | a string returns a Series |
+| 1b | `df[["a", "b"]]` | `DataFrame` | a list returns a DataFrame |
+| 2 | `df.iloc[i]` / `df.iloc[a:b]` | `Series` / `DataFrame` | positional, zero-based, **upper-bound exclusive** |
+| 3 | `df.loc[label]` / `df.loc[a:b]` | `Series` / `DataFrame` | label-based, **upper-bound INCLUSIVE** |
+| 4 | `df.loc[rows, cols]` | `DataFrame` | combined row + column selection |
+| 5 | `df[df["col"] == v]` | `DataFrame` | boolean-mask filter |
+| 6 | `df.loc[row, col] = v` | (assignment) | the **safe write** form — never chain two `[]` calls |
+| 7 | `safe_iloc(frame, i)` *(this script)* | `Series \| None` | defensive wrapper that returns `None` for out-of-range positions |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing."""
+
+from __future__ import annotations
+from pathlib import Path
+import numpy as np
+import pandas as pd
+
+
+def generate_postings(n_rows=50, seed=7) -> pd.DataFrame:
+    """50-row synthetic frame indexed by job_id (label index, not RangeIndex)."""
+    rng = np.random.default_rng(seed)
+    base = pd.Timestamp("2024-01-01")
+    return pd.DataFrame({
+        "job_id": np.arange(1001, 1001 + n_rows, dtype="int64"),
+        "job_title": rng.choice(ROLES, size=n_rows),
+        "sector": rng.choice(SECTORS, size=n_rows),
+        "experience_years": rng.integers(0, 12, size=n_rows),
+        "salary_lpa": rng.lognormal(2.4, 0.5, size=n_rows).round(1),
+        "date_posted": base + pd.to_timedelta(
+            rng.integers(0, 180, size=n_rows), unit="D"
+        ),
+    }).set_index("job_id")
+
+
+def safe_iloc(frame: pd.DataFrame, position: int) -> pd.Series | None:
+    """Defensive iloc: returns None instead of raising IndexError."""
+    if not 0 <= position < len(frame):
+        return None
+    return frame.iloc[position]
+```
+
+### Explanation of Each Pattern
+
+#### 1. Column selection — Series vs DataFrame
+
+```python
+df["job_title"]                # -> Series  (single column)
+df[["job_title", "salary_lpa"]]  # -> DataFrame (column subset)
+```
+
+The shape of the return type depends entirely on whether you passed a string or a *list*. Many bugs come from accidentally writing `df["x"]` when `df[["x"]]` was needed (or vice versa) — the next operation expects one type and gets the other.
+
+#### 2. Rows by **position** — `iloc`
+
+```python
+df.iloc[0]      # first row, as a Series
+df.iloc[0:3]    # rows 0, 1, 2 — NOT 0..3 (Python half-open slicing)
+df.iloc[-1]     # last row (negative index works)
+```
+
+`iloc` is the *positional* selector. It behaves exactly like Python list slicing: zero-based, upper bound exclusive, negative indexes count from the end. Use `iloc` when the row's *position* is what you actually mean ("the first row", "every 5th row").
+
+#### 3. Rows by **label** — `loc`
+
+```python
+df.loc[1001]          # the row whose job_id == 1001
+df.loc[1001:1003]     # INCLUSIVE on both ends — returns 3 rows, not 2
+```
+
+`loc` looks up by the *value* in the index, not the position. The biggest gotcha: `loc[a:b]` is inclusive on both ends, unlike Python's regular `[a:b]`. This is a deliberate design choice — when you slice by label, you usually mean "from `a` to `b`, both included" rather than "up to but not including `b`."
+
+#### 4. Combined row + column selection
+
+```python
+finance_ids = df.index[df["sector"] == "Finance"][:3]
+df.loc[finance_ids, ["job_title", "salary_lpa"]]
+```
+
+`loc[rows, cols]` is the canonical *"give me these specific cells"* form. `iloc` has the same shape: `df.iloc[row_positions, col_positions]`. Always specify both axes in one call rather than chaining `df.loc[rows].loc[cols]`.
+
+#### 5. Boolean masking
+
+```python
+df[df["sector"] == "Finance"]                                # one condition
+df[(df["sector"] == "Finance") & (df["salary_lpa"] > 15)]    # combined
+```
+
+Multi-condition masking uses `&`, `|`, `~` on Series — **not** Python's `and`, `or`, `not`. The boolean ones operate element-wise; the keyword ones don't. Parentheses around each comparison are required because `&` has higher precedence than `==` in Python.
+
+#### 6. Chained-indexing pitfall — why `df["col"][i] = v` is wrong
+
+```python
+# DON'T:
+df["salary_lpa"][1001] = 99    # -> SettingWithCopyWarning (sometimes silent)
+
+# DO:
+df.loc[1001, "salary_lpa"] = 99   # always sticks, never warns
+```
+
+The first form does two operations: `df["salary_lpa"]` returns a Series (sometimes a view, sometimes a copy), and the `[1001] = 99` assigns into *that* Series. When Pandas returns a copy, the write doesn't propagate back to the original frame — but no error is raised, only a warning, and the warning isn't always reliable. The `loc[row, col]` form is one indivisible operation that always writes through.
+
+**Rule of thumb:** any *write* uses `.loc` / `.iloc` with both axes specified together; never chain two `[]` calls when assigning.
+
+#### 7. Out-of-range handling — `safe_iloc`
+
+```python
+def safe_iloc(frame, position):
+    if not 0 <= position < len(frame):
+        return None
+    return frame.iloc[position]
+```
+
+Raw `iloc[position]` raises `IndexError` for out-of-range positions. Wrapping in a defensive helper that returns `None` lets calling code branch on a missing-row case without `try`/`except` clutter. Same idea as the `safe_get` from 4.23's NumPy lesson, just transplanted to DataFrames.
+
+### Sample Output (excerpt)
+
+```
+1) Column selection — single name vs list of names
+
+df['job_title'].head(5)  -> Series (one column):
+job_id
+1001    Data Engineer
+1002      ML Engineer
+1003    Data Engineer
+...
+type(...): Series
+
+df[['job_title', 'salary_lpa']].head(5)  -> DataFrame:
+              job_title  salary_lpa
+job_id
+1001      Data Engineer        20.7
+1002        ML Engineer        15.3
+type(...): DataFrame
+
+3) Rows by LABEL — loc[]:
+
+df.loc[1001:1003] -> INCLUSIVE on both ends (returns 3 rows, not 2):
+            job_title    sector  experience_years  salary_lpa date_posted
+job_id
+1001    Data Engineer  Technology               8        20.7  2024-02-11
+1002      ML Engineer     Retail               4        15.3  2024-04-22
+1003    Data Engineer    Finance               2        11.4  2024-05-09
+
+5) Boolean mask:
+df[df['sector'] == 'Finance']  -> 13 of 50 rows matched
+
+6) Verified write via .loc: before = 20.7, after = 99.0.
+
+7) safe_iloc(frame, len(frame) + 100) -> None  (None, no crash)
+```
+
+### Selection Cheat Sheet
+
+```
+df['col']                  -> Series        (single column)
+df[['a', 'b']]             -> DataFrame     (column subset)
+df.iloc[i]                 -> Series        (i-th row, positional)
+df.iloc[a:b]               -> DataFrame     (positions a..b-1, exclusive)
+df.loc[label]              -> Series        (row by index value)
+df.loc[a:b]                -> DataFrame     (INCLUSIVE both ends)
+df.loc[rows, cols]         -> DataFrame     (cells)
+df[df['col'] == v]         -> DataFrame     (boolean mask)
+df.loc[mask, 'col'] = v    -> safe write    (one-shot assignment)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/select_rows_columns.py
+python3 -m black src/select_rows_columns.py
+python3 -m ruff check src/select_rows_columns.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| `df["x"]` when `df[["x"]]` was meant (or vice versa) | Series vs DataFrame mismatch breaks the next operation |
+| Treating `loc[a:b]` as half-open like Python | Off-by-one — `loc` is inclusive on both ends |
+| Chained write: `df["col"][i] = v` | `SettingWithCopyWarning`; the assignment may or may not stick |
+| Combining masks with `and` / `or` instead of `&` / `|` | `ValueError: The truth value of an array is ambiguous` |
+| Skipping parentheses in multi-condition masks | Operator-precedence bug — `&` binds tighter than `==` |
+| Using a `RangeIndex(0..N)` for the demo | iloc and loc coincide, so the lesson is invisible |
+| Passing scalars where a list was expected | `KeyError` instead of returning a single-row DataFrame |
+
+### Conclusion
+
+Selection is the workhorse operation of every Pandas pipeline — every filter, every aggregation, every plot starts with picking out the rows and columns of interest. The seven patterns here cover every shape of selection you'll write: single column, multi column, positional row, label row, combined cells, boolean mask, and safe write. Once these are reflexive, the cleaning suite that follows (4.33–4.36 missing-value detection, drop/fill, dedup, standardisation) is mostly composing them.
 
 ---
 
