@@ -47,6 +47,7 @@
 - [Assignment 4.39 — Visualizing Data Distributions Using Histograms](#assignment-439--visualizing-data-distributions-using-histograms)
 - [Assignment 4.40 — Visualizing Data Distributions Using Boxplots](#assignment-440--visualizing-data-distributions-using-boxplots)
 - [Assignment 4.41 — Identifying Trends Over Time Using Line Plots](#assignment-441--identifying-trends-over-time-using-line-plots)
+- [Assignment 4.42 — Exploring Relationships Between Variables Using Scatter Plots](#assignment-442--exploring-relationships-between-variables-using-scatter-plots)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -7137,6 +7138,186 @@ ls outputs/figures/postings_*line.png
 ### Conclusion
 
 Histograms (4.39) and boxplots (4.40) describe a static distribution; line plots describe how that distribution evolves. Three views — daily, weekly, per-sector — combined with a `±2σ` anomaly band cover the full set of trend-spotting questions a 180-day stream can answer. With these in place the visualisation toolkit is ready for the relationship view (scatter, 4.42) and the unified outlier story (4.43).
+
+---
+
+## Assignment 4.42 — Exploring Relationships Between Variables Using Scatter Plots
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+A scatter plot is the right chart for the question *"do these two columns move together?"* — one observation per point, x and y positions reflecting two variables, the cloud's shape telling you the relationship's **direction**, **strength**, and any **outliers**.
+
+### File Name
+
+`src/visualize_scatter.py`
+
+### Why a Synthetic Frame with a Real Correlation
+
+A scatter on uncorrelated random columns is just a square cloud — there's nothing to find. The script generates a 250-row frame where:
+
+```
+salary = 6.0 + 0.90 × experience + sector_premium + noise
+```
+
+with sector premiums Tech `+5.0`, Finance `+4.0`, Healthcare `+1.5`, Manufacturing `0.0`, Retail `-1.0`. So the scatter has a **real positive trend**, **parallel sector bands**, and **realistic noise** — the four scatter patterns each get to demonstrate something real.
+
+### Four Patterns Saved to `outputs/figures/`
+
+| # | File | Demonstrates |
+|---|---|---|
+| 1 | `experience_salary_scatter.png` | Basic two-variable scatter — the cloud |
+| 2 | `experience_salary_per_sector_scatter.png` | Same scatter colour-coded by sector — parallel bands |
+| 3 | `experience_salary_with_trendline_scatter.png` | Least-squares line + Pearson `r` in the legend |
+| 4 | `experience_salary_outliers_scatter.png` | Points >2σ off the trend line highlighted in red |
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.42 — Scatter plots for relationships between variables."""
+
+from __future__ import annotations
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+
+def fit_linear_trend(x: np.ndarray, y: np.ndarray) -> tuple[float, float, float]:
+    """Return (slope, intercept, pearson_r) for a least-squares line."""
+    slope, intercept = np.polyfit(x, y, deg=1)
+    r = float(np.corrcoef(x, y)[0, 1])
+    return float(slope), float(intercept), r
+
+
+def residual_outliers(
+    x: pd.Series, y: pd.Series, slope: float, intercept: float, threshold: float = 2.0
+) -> pd.Series:
+    """True for points whose residual is > threshold std from the regression line.
+
+    Relationship-aware analogue of the boxplot's 1.5*IQR rule -- 'unusual
+    GIVEN the predictor', not just 'unusual on its own'.
+    """
+    residuals = y - (slope * x + intercept)
+    std = residuals.std()
+    return residuals.abs() / std > threshold
+
+
+def plot_per_sector_scatter(frame, path):
+    fig, ax = plt.subplots(figsize=(8, 5.5))
+    palette = {
+        "Technology": "#1f77b4", "Finance": "#ff7f0e", "Healthcare": "#2ca02c",
+        "Manufacturing": "#d62728", "Retail": "#9467bd",
+    }
+    for sector, color in palette.items():
+        sub = frame[frame["sector"] == sector]
+        ax.scatter(sub["experience_years"], sub["salary_lpa"],
+                   s=24, alpha=0.6, color=color, edgecolor="white",
+                   label=f"{sector} (n={len(sub)})")
+    ax.legend(title="sector", loc="upper left", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=120)
+    plt.close(fig)
+```
+
+### Explanation of Each Pattern
+
+#### 1. Basic scatter — the relationship at a glance
+
+`ax.scatter(experience_years, salary_lpa, s=22, alpha=0.55)` produces an upward-sloping cloud. The width of the cloud is the noise — if it were a thin line, salary would be a deterministic function of experience.
+
+#### 2. Per-sector colour coding — parallel bands
+
+```
+Per-sector mean salary (highest → lowest):
+  Technology     16.06
+  Finance        15.45
+  Healthcare     12.82
+  Manufacturing  11.28
+  Retail         10.31
+```
+
+Each sector forms its own colour-coded band running diagonally up the chart. The **slope is the same** across sectors (experience → salary effect is universal); the **vertical offsets differ** (sector premium). That's the kind of structural insight a single-colour scatter would hide.
+
+#### 3. Trend line + Pearson `r`
+
+```python
+slope, intercept = np.polyfit(x, y, deg=1)
+r = np.corrcoef(x, y)[0, 1]
+```
+
+For this frame: `y = 0.86x + 8.19`, **`r = 0.75`** (strong positive correlation). The fitted slope `0.86` matches the generator's `0.90` ± noise, confirming the linear model is right for this relationship.
+
+| `r` | Interpretation |
+|---:|---|
+| ≈ 1 | Perfect positive linear |
+| ≈ 0.7–0.9 | Strong positive |
+| ≈ 0.3–0.7 | Moderate |
+| ≈ 0 | No linear relationship (could still be non-linear!) |
+| ≈ −0.7 | Strong negative |
+
+**Always pair `r` with the picture.** A high `r` on a non-linear cloud is misleading; Anscombe's quartet is the canonical reminder.
+
+#### 4. Residual outliers — unusual *given* the predictor
+
+```python
+residual = y - (slope * x + intercept)
+flagged = residual.abs() / residual.std() > 2.0
+```
+
+11 residual outliers flagged on this frame. These are points whose `salary_lpa` is unusual *given their `experience_years`* — they would look perfectly normal on a single-variable boxplot of salary alone, because the unusual-ness is **conditional on the predictor**.
+
+This is the relationship-aware analogue of the boxplot's `1.5×IQR` rule from 4.40, and it's the right tool when you want to find "underpaid for their experience" or "overpaid for their experience" cases — bivariate outliers that univariate detection cannot see.
+
+### When Scatter, When Other Plot?
+
+| Question | Right plot |
+|---|---|
+| Two numeric variables, do they move together? | **Scatter** |
+| One numeric, one time | Line plot (4.41) |
+| One numeric, one categorical | Boxplot per group (4.40) |
+| Single distribution shape detail | Histogram (4.39) |
+| 3+ numeric variables at once | Pair plot, or scatter coloured by 3rd |
+
+### Scatter Cheat Sheet
+
+```
+ax.scatter(x, y, s=22, alpha=0.55)             -> basic scatter
+ax.scatter(..., c=group_codes, cmap="viridis") -> colour by group
+np.polyfit(x, y, deg=1)                        -> least-squares line
+np.corrcoef(x, y)[0, 1]                        -> Pearson r
+residual = y - (slope*x + intercept)           -> per-point error
+residual.abs() / residual.std() > 2            -> 2-std outlier rule
+
+CAUTION
+  correlation != causation
+  r assumes a *linear* relationship; inspect the cloud first
+  alpha < 1 prevents heavy overplotting
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt
+python3 src/visualize_scatter.py
+ls outputs/figures/experience_salary_*.png
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| Reporting only Pearson `r` without the picture | Non-linear relationships look weak even when they're real |
+| `alpha=1.0` on a 1000-point scatter | Heavy overplotting; the cloud becomes one solid blob |
+| Inferring causation from correlation | Confounders (here: sector) explain a chunk of the relationship — the colour-coded version makes that visible |
+| Using a single-variable rule for relationship outliers | Underpaid-for-experience cases stay invisible |
+| Plotting raw scatter with no axis labels | Charts in slide decks become unreadable |
+| Demoing on uncorrelated random data | The scatter is a square cloud; no relationship to discuss |
+
+### Conclusion
+
+Scatter plots are the canonical first chart for any *bivariate* numeric question. With histograms (4.39), boxplots (4.40), line plots (4.41), and now scatter, the visual EDA toolkit covers shape, comparison, time, and relationship. The residual-outlier helper here also feeds directly into the unified outlier story in 4.43.
 
 ---
 
