@@ -39,6 +39,7 @@
 - [Assignment 4.31 — Understanding Data Shapes and Column Data Types](#assignment-431--understanding-data-shapes-and-column-data-types)
 - [Assignment 4.32 — Selecting Rows and Columns Using Indexing and Slicing](#assignment-432--selecting-rows-and-columns-using-indexing-and-slicing)
 - [Assignment 4.33 — Detecting Missing Values in DataFrames](#assignment-433--detecting-missing-values-in-dataframes)
+- [Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies](#assignment-434--handling-missing-values-using-drop-and-fill-strategies)
 - [Key Features](#key-features)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -5470,6 +5471,211 @@ python3 -m ruff check src/detect_missing_values.py
 ### Conclusion
 
 The four detection questions — *where*, *how much*, *which rows*, *random or structured* — are the diagnostic step before any cleaning decision. Running them on a frame with *deliberately structured* missingness shows why all four matter: a global "fill with mean" strategy is wrong for `perks` because the missingness is sector-driven, not random. The next assignment (4.34) takes the answers from this detection step and turns them into drop / fill choices.
+
+---
+
+## Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies
+
+**Author:** Bhargav Kalambhe
+
+### Objective
+
+Detection (4.33) said *where* and *how much* is missing. This assignment turns those answers into action — either dropping the rows / columns, filling in the missing values, or some mix of the two applied per column based on what the column actually represents.
+
+The lesson is that **there is no single right strategy**. Five strategies are demonstrated side-by-side on the same shaped-missingness frame from 4.33 so the trade-offs are visible: how many rows survive, how the salary mean shifts, whether the categorical distribution gets distorted.
+
+### File Name
+
+`src/handle_missing_values.py`
+
+### Five Strategies — Trade-offs at a Glance
+
+| Strategy | Pandas call | When it's right | Cost |
+|---|---|---|---|
+| Drop any-missing rows | `dropna(how="any")` | Frame is small and you need complete cases | Lossy — here, 43 of 100 rows |
+| Drop targeted rows | `dropna(subset=[crit])` | Only some columns are essential | Smaller loss, no invented values |
+| Drop high-missing columns | `df[df.isna().mean() <= t]` | Column is too sparse to be useful | Loses the signal in that column entirely |
+| Fill numeric with median | `fillna(series.median())` | Column distribution is skewed | Pulls all NaN to a single value (density distorted) |
+| Group-aware fill | `groupby(g)[c].transform("median")` | **Structured missingness** (sector-driven, etc.) | Preserves within-group distribution |
+
+The combined recipe at the end picks one of these per column, based on what 4.33's pattern detection said about that column.
+
+### Key Pieces of the Script
+
+```python
+"""Assignment 4.34 — Handling Missing Values Using Drop and Fill Strategies."""
+
+from __future__ import annotations
+import numpy as np
+import pandas as pd
+
+
+def drop_rows_with_any_missing(frame: pd.DataFrame) -> pd.DataFrame:
+    """Drop any row that has any missing value. Most aggressive."""
+    return frame.dropna(how="any")
+
+
+def drop_columns_above_missing_rate(
+    frame: pd.DataFrame, threshold: float
+) -> pd.DataFrame:
+    """Drop columns whose missing rate exceeds threshold (e.g. 0.5)."""
+    rates = frame.isna().mean()
+    return frame[rates[rates <= threshold].index]
+
+
+def fill_numeric_with_median(frame: pd.DataFrame, column: str) -> pd.DataFrame:
+    """Fill numeric NaN with the column median (skew-resistant)."""
+    return frame.assign(**{column: frame[column].fillna(frame[column].median())})
+
+
+def fill_numeric_by_group(
+    frame: pd.DataFrame, group_col: str, target_col: str
+) -> pd.DataFrame:
+    """Group-aware fill: each group's NaN gets that group's median.
+
+    Right strategy when 4.33 detected structured missingness — a global
+    fill would smear sector-specific structure across all rows.
+    """
+    group_medians = frame.groupby(group_col, observed=True)[target_col].transform(
+        "median"
+    )
+    return frame.assign(**{target_col: frame[target_col].fillna(group_medians)})
+
+
+def fill_with_constant(frame: pd.DataFrame, column: str, value: object) -> pd.DataFrame:
+    """Constant fill — best for categoricals where missing means 'no info'."""
+    return frame.assign(**{column: frame[column].fillna(value)})
+```
+
+### Explanation of Each Strategy
+
+#### 1. Drop strategies — three flavours
+
+```python
+frame.dropna(how="any")                              # 43 rows lost on this frame
+frame.dropna(subset=["salary_lpa", "date_posted"])   # 13 rows lost — targeted
+frame.dropna(thresh=ncols - 1)                       # keep rows missing ≤ 1 cell
+df[df.isna().mean() <= 0.25]                         # drop columns with >25% missing
+```
+
+`how="any"` is the easiest to write but the most destructive. `subset=` is usually what you actually want — only drop a row when an *important* column is missing. `thresh=` is the per-row sliding cut-off. Dropping columns is the right move when a column is so sparse the signal isn't worth the storage (here, `perks` at 33% crosses a 25% gate).
+
+#### 2. Fill numeric — mean vs median vs group-aware
+
+```python
+frame.fillna(frame["salary_lpa"].mean())                              # global mean
+frame.fillna(frame["salary_lpa"].median())                             # global median (skew-resistant)
+frame.groupby("sector")["salary_lpa"].transform("median")              # per-sector median
+```
+
+Median beats mean on a skewed distribution — and 4.30 confirmed `salary_lpa` is right-skewed (mean 11.63 vs median 10.90). The per-sector median is what 4.33's pattern detection pointed at: when missingness is sector-driven, a global statistic smears structure that the cleaning step should preserve.
+
+#### 3. Fill categorical — constant vs mode
+
+```python
+frame["perks"].fillna("Unknown")                  # preserves the "no info" signal
+frame["perks"].fillna(frame["perks"].mode()[0])    # pushes NaN into dominant bucket
+```
+
+The output makes the trade-off concrete:
+
+```
+perks value counts (source, NaN visible):    after fillna('Unknown'):    after fillna(mode):
+gym       16                                  Unknown   33                 gym       49 ← distorted
+training  16                                  training  16                 training  16
+NA        33   ← the missingness                gym       16                 stock     13
+stock     13                                  stock     13                 wfh       12
+wfh       12                                  wfh       12                 meals     10
+meals     10                                  meals     10
+```
+
+Filling with `"Unknown"` keeps a 33-row "we don't know" bucket visible to any later `groupby('perks')`. Filling with mode collapses those 33 rows into `gym` (16 → 49) — that's a 3× inflation that distorts every later aggregation.
+
+#### 4. The defensible combined recipe
+
+The script ends with a per-column recipe that picks the right strategy per column based on what 4.33 detected:
+
+| Column | Choice | Why |
+|---|---|---|
+| `salary_lpa` | per-sector median | Skewed distribution + worth keeping rows |
+| `date_posted` | drop rows | Only 5% missing; no good way to invent a date |
+| `perks` | `"Unknown"` constant | 33% missing, structured — preserve the signal |
+| `benefits_score` | per-sector median | Correlated with `perks`, structured |
+
+Result: shape `(100, 8)` → `(94, 8)` with **0 missing cells in any column**. Six rows lost (the date-missing ones), no values invented for `perks`, no global statistic smeared across sectors.
+
+#### 5. The dtype-mismatch trap
+
+```python
+raw["perks"].fillna(0)            # perks becomes object/mixed (string and int!)
+raw["salary_lpa"].fillna("?")     # salary becomes object (no more arithmetic)
+```
+
+Fill values must match the column's intended dtype. The script uses `"Unknown"` (string) for the string-typed `perks` column on purpose — `pd.NA → "Unknown"` keeps the dtype as `string`, no silent coercion to mixed-type `object`.
+
+### Sample Output (excerpt)
+
+```
+1) Drop strategies — three flavours
+
+  dropna(how='any')                              (100, 8) -> (57, 8)  (-43 rows, -0 cols)
+  dropna(subset=['salary_lpa', 'date_posted'])    (100, 8) -> (87, 8)  (-13 rows, -0 cols)
+  dropna(thresh=ncols-1)  (keep rows missing <=1) (100, 8) -> (84, 8)  (-16 rows, -0 cols)
+  drop columns with >25% missing                  (100, 8) -> (100, 6) (-0 rows, -2 cols)
+
+2) Fill strategies — numeric (mean / median / group):
+  source (NaN dropped from mean)                  mean 11.34 -> 11.34
+  fillna(global mean)                              mean 11.34 -> 11.34
+  fillna(global median)                            mean 11.34 -> 11.27   (-0.07)
+  fillna(per-sector median)                        mean 11.34 -> 11.21   (-0.13)
+
+3) Categorical fill:
+  perks after fillna('Unknown'):  Unknown 33, training 16, gym 16, ...
+  perks after fillna(mode):       gym 49 (distorted), training 16, ...
+
+4) Combined recipe — shape (100, 8) -> (94, 8), 0 missing cells in any column.
+```
+
+### Drop / Fill Cheat Sheet
+
+```
+frame.dropna(how="any")                         -> any-NaN row drop (lossy)
+frame.dropna(subset=[col])                      -> targeted row drop
+frame.dropna(thresh=N)                          -> keep rows with ≥ N non-NaN
+frame.dropna(axis=1)                            -> drop columns with NaN
+series.fillna(value)                            -> constant fill
+series.fillna(series.median())                  -> median fill
+series.fillna(series.mode().iloc[0])            -> mode fill
+frame.groupby(g)[c].transform("median")         -> group-aware fill source
+series.ffill() / series.bfill()                 -> forward/back fill (time-ordered)
+```
+
+### How to Run the Script
+
+```bash
+cd S64-0126-Team06-ADSF-Job---Shauk
+python3 -m pip install -r requirements.txt   # first time only
+python3 src/handle_missing_values.py
+python3 -m black src/handle_missing_values.py
+python3 -m ruff check src/handle_missing_values.py
+```
+
+### Common Mistakes (Avoided Here)
+
+| Mistake | Consequence |
+|---|---|
+| `dropna(how="any")` as the default cleaning | 43% row loss on this frame; usually too aggressive |
+| Filling with mean on a skewed distribution | Pulls fill toward the long tail; median is safer |
+| Filling structured-missingness with a global statistic | Smears sector-specific signal that 4.33 detected |
+| Mode fill on a categorical with 30%+ missing | Inflates dominant category 3×, distorts groupby |
+| Filling categorical with a number (or vice versa) | Silent dtype coercion to `object`; later type checks fail |
+| One strategy for the whole frame | Different columns have different missingness shapes — pick per column |
+| Dropping rows without recording how many were lost | The cleaning step becomes invisible to downstream review |
+| Demoing only on a clean CSV | The strategies have no NaN to handle — lesson reads as theoretical |
+
+### Conclusion
+
+Drop and fill are the two operations that actually *do* something with the missingness 4.33 detected. The right call depends on the column: critical-but-rarely-missing columns (`date_posted` at 5%) get dropped at the row level; skewed numerics with structured missingness (`salary_lpa`, `benefits_score`) get a per-sector median; categorical columns where "missing" carries information (`perks`) get a `"Unknown"` constant. The combined recipe at the end of the script encodes those choices, and the resulting frame is ready for the deduplication (4.35) and standardisation (4.36) steps that follow.
 
 ---
 
