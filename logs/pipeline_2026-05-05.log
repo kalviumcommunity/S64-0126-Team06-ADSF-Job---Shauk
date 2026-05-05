@@ -1,0 +1,70 @@
+2026-05-05 17:40:04,385 | INFO     | __main__ | === Job-ही-Shauk v2 Pipeline Starting ===
+2026-05-05 17:40:04,393 | INFO     | __main__ | Stage 1: Ingestion
+2026-05-05 17:40:04,397 | INFO     | src.utils.io | load_csv: read 20 rows × 9 cols from sample_job_postings.csv
+2026-05-05 17:40:04,399 | INFO     | src.utils.io | load_csv: read 60 rows × 8 cols from placement_outcomes.csv
+2026-05-05 17:40:04,399 | INFO     | src.utils.validate | validate_schema: OK — all 9 expected columns present
+2026-05-05 17:40:04,400 | INFO     | src.utils.validate | validate_schema: OK — all 8 expected columns present
+2026-05-05 17:40:04,401 | INFO     | src.utils.io |   shape   : (20, 9)
+2026-05-05 17:40:04,402 | INFO     | src.utils.io |   dtypes  :
+job_id                         int64
+job_title                        str
+company                          str
+sector                           str
+location                         str
+skills_required                  str
+date_posted           datetime64[us]
+experience_min_yrs           float64
+salary_lpa                   float64
+2026-05-05 17:40:04,404 | INFO     | src.utils.io |   nulls   : none
+2026-05-05 17:40:04,414 | INFO     | src.utils.io |   shape   : (60, 8)
+2026-05-05 17:40:04,415 | INFO     | src.utils.io |   dtypes  :
+candidate_id                    int64
+skills                            str
+education                         str
+years_of_experience           float64
+placed                          int64
+placement_date         datetime64[us]
+offered_salary_lpa            float64
+sector_placed_in                  str
+2026-05-05 17:40:04,416 | INFO     | src.utils.io |   nulls   :
+placement_date        16
+offered_salary_lpa    16
+sector_placed_in      16
+2026-05-05 17:40:04,424 | INFO     | __main__ | Stage 2: Cleaning
+2026-05-05 17:40:04,432 | INFO     | __main__ | Stage 3: Canonicalization
+2026-05-05 17:40:04,439 | INFO     | src.utils.canonicalize | load_skill_vocabulary: 110 aliases → 21 canonical skills from skills_canonical.yaml (v2.1.0)
+2026-05-05 17:40:04,445 | INFO     | __main__ | Stage 4: Join
+2026-05-05 17:40:04,459 | INFO     | src.utils.join | build_skill_demand_supply_table: 15 skills in output
+2026-05-05 17:40:04,463 | INFO     | src.utils.join | build_sector_skill_matrix: 5 sectors × 13 skills
+2026-05-05 17:40:04,466 | INFO     | __main__ | Stage 5: Analysis
+2026-05-05 17:40:04,484 | INFO     | __main__ | Trend analysis: granularity='ME', 10 periods
+2026-05-05 17:40:04,486 | INFO     | __main__ | Salary outliers (IQR): 0 / 20 (0.0%)
+2026-05-05 17:40:04,487 | INFO     | __main__ | Stage 6: Visualisation
+2026-05-05 17:40:04,674 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/top_skills.png
+2026-05-05 17:40:04,680 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,682 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,683 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,684 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,685 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,686 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,687 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,688 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,689 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,690 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,692 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,693 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,694 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,695 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,696 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,697 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,698 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,699 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,701 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,702 | INFO     | matplotlib.category | Using categorical units to plot a list of strings that are all parsable as floats or dates. If these strings should be plotted as numbers, cast to the appropriate data type before plotting.
+2026-05-05 17:40:04,882 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/skill_trend.png
+2026-05-05 17:40:05,017 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/placement_lift.png
+2026-05-05 17:40:05,149 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/salary_dist.png
+2026-05-05 17:40:05,309 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/salary_exp_scatter.png
+2026-05-05 17:40:05,452 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/skill_boxplot.png
+2026-05-05 17:40:05,566 | INFO     | src.utils.viz | Saved chart → /Users/sky_walker/Documents/Kalvium-projects/Sprint3/S64-0126-Team06-ADSF-Job---Shauk/outputs/figures/corr_heatmap.png
+2026-05-05 17:40:05,654 | INFO     | __main__ | === Pipeline complete in 1183 ms. Manifest: run_manifest_2026-05-05_174005.json ===

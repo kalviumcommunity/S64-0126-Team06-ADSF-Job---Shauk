@@ -1,4 +1,21 @@
-job_id,job_title,company,sector,skills_required,date_posted,salary_lpa
-1,Data Scientist,Acme Corp,Technology,"Python,SQL,Machine Learning",2024-01-15,12.0
-2,ML Engineer,Beta Inc,Technology,"Python,TensorFlow,Deep Learning",2024-02-10,18.0
-3,Data Analyst,Gamma Ltd,Finance,"SQL,Excel,Data Analysis",2024-01-20,7.0
+job_id,job_title,company,sector,location,skills_required,date_posted,experience_min_yrs,salary_lpa
+1,Data Scientist,Acme Corp,Technology,Bangalore,"Python,SQL,Machine Learning",2024-01-15,2.0,12.0
+2,ML Engineer,Beta Inc,Technology,Mumbai,"Python,TensorFlow,Deep Learning",2024-02-10,3.0,18.0
+3,Data Analyst,Gamma Ltd,Finance,Delhi,"SQL,Excel,Data Analysis",2024-01-20,1.0,7.0
+4,Business Analyst,Delta Co,Finance,Chennai,"Excel,Statistics,Communication",2024-03-05,2.0,9.0
+5,Data Engineer,Epsilon Sys,Technology,Hyderabad,"Python,SQL,Cloud",2024-02-28,3.0,15.0
+6,ML Researcher,Zeta AI,Technology,Bangalore,"Python,Deep Learning,Statistics",2024-04-01,4.0,22.0
+7,Data Analyst,Eta Analytics,Healthcare,Pune,"SQL,Excel,Data Analysis",2024-03-15,1.0,6.5
+8,BI Developer,Theta BI,Finance,Mumbai,"SQL,Power BI,Excel",2024-04-20,2.0,10.0
+9,Data Scientist,Iota ML,Technology,Delhi,"Python,Machine Learning,Statistics",2024-05-10,3.0,16.0
+10,Analytics Lead,Kappa Data,Retail,Bangalore,"Python,SQL,Tableau",2024-05-25,5.0,20.0
+11,NLP Engineer,Lambda NLP,Technology,Mumbai,"Python,Deep Learning,Machine Learning",2024-06-01,4.0,24.0
+12,Data Analyst,Mu Corp,Manufacturing,Chennai,"Excel,SQL,Statistics",2024-06-15,1.0,5.5
+13,ML Engineer,Nu AI,Technology,Hyderabad,"Python,TensorFlow,Machine Learning",2024-07-01,3.0,19.0
+14,Data Scientist,Xi Corp,Finance,Pune,"Python,SQL,Statistics",2024-07-20,2.0,14.0
+15,Analytics Engineer,Omicron,Technology,Bangalore,"Python,SQL,Cloud",2024-08-05,3.0,17.0
+16,Business Intelligence,Pi BI,Retail,Mumbai,"SQL,Power BI,Tableau",2024-08-20,2.0,11.0
+17,Data Analyst,Rho Ltd,Healthcare,Delhi,"SQL,Excel,Communication",2024-09-01,1.0,6.0
+18,Senior Data Scientist,Sigma DS,Technology,Bangalore,"Python,Machine Learning,Deep Learning",2024-09-15,5.0,28.0
+19,Data Engineer,Tau Systems,Technology,Chennai,"Python,SQL,Docker",2024-10-01,3.0,16.5
+20,MLOps Engineer,Upsilon,Technology,Hyderabad,"Python,Docker,Cloud",2024-10-20,4.0,21.0

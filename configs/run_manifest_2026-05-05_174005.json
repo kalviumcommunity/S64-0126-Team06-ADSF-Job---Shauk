@@ -1,0 +1,19 @@
+{
+  "git_sha": "ec56fe5f828df2f4bb121995f8e88cfdda607fba",
+  "input_hashes": {
+    "sample_job_postings.csv": "f528e843f8eda1e4369d83ce57954bf9492017b5a81c535fb23a5cd1c2c5693c",
+    "placement_outcomes.csv": "0e929b9e93e432bb8412018aacf40528c7810a3d85ed67eca33938feba01ce46"
+  },
+  "stage_durations_ms": {
+    "ingestion": 30,
+    "cleaning": 8,
+    "canonicalization": 13,
+    "join": 20,
+    "analysis": 21,
+    "visualisation": 1081
+  },
+  "total_duration_ms": 1183,
+  "python_version": "3.12.6 (v3.12.6:a4a2d2b0d85, Sep  6 2024, 16:08:03) [Clang 13.0.0 (clang-1300.0.29.30)]",
+  "hostname": "Harshs-MacBook-Air.local",
+  "timestamp": "2026-05-05T17:40:05.653857"
+}

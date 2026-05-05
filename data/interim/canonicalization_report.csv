@@ -1,0 +1,16 @@
+raw_skill,canonical_skill,match_tier,match_score,occurrence_count
+python,python,exact,,43
+sql,sql,exact,,34
+machine learning,machine_learning,exact,,19
+tensorflow,tensorflow,exact,,9
+deep learning,deep_learning,exact,,13
+excel,excel,exact,,21
+data analysis,data_analysis,fuzzy,92.3076923076923,9
+statistics,statistics,exact,,22
+communication,communication,exact,,10
+cloud,cloud,exact,,10
+power bi,power_bi,exact,,8
+tableau,tableau,exact,,9
+docker,docker,exact,,6
+r,r,exact,,5
+project management,project_management,exact,,1

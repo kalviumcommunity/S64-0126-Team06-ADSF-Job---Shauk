@@ -1,0 +1,51 @@
+job_id,job_title,company,sector,location,skills_required,date_posted,experience_min_yrs,salary_lpa
+1,Data Scientist,Acme Corp,Technology,Bangalore,"Python,SQL,Machine Learning",2023-01-15,2.0,12.0
+2,ML Engineer,Beta Inc,Technology,Mumbai,"Python,TensorFlow,Deep Learning",2023-02-10,3.0,18.0
+3,Data Analyst,Gamma Ltd,Finance,Delhi,"SQL,Excel,Data Analysis",2023-01-20,1.0,7.0
+4,Business Analyst,Delta Co,Finance,Chennai,"Excel,Statistics,Communication",2023-03-05,2.0,9.0
+5,Data Engineer,Epsilon Sys,Technology,Hyderabad,"Python,SQL,Cloud",2023-02-28,3.0,15.0
+6,ML Researcher,Zeta AI,Technology,Bangalore,"Python,Deep Learning,Statistics",2023-04-01,4.0,22.0
+7,Data Analyst,Eta Analytics,Healthcare,Pune,"SQL,Excel,Data Analysis",2023-03-15,1.0,6.5
+8,BI Developer,Theta BI,Finance,Mumbai,"SQL,Power BI,Excel",2023-04-20,2.0,10.0
+9,Data Scientist,Iota ML,Technology,Delhi,"Python,Machine Learning,Statistics",2023-05-10,3.0,16.0
+10,Analytics Lead,Kappa Data,Retail,Bangalore,"Python,SQL,Tableau",2023-05-25,5.0,20.0
+11,NLP Engineer,Lambda NLP,Technology,Mumbai,"Python,Deep Learning,Machine Learning",2023-06-01,4.0,24.0
+12,Data Analyst,Mu Corp,Manufacturing,Chennai,"Excel,SQL,Statistics",2023-06-15,1.0,5.5
+13,ML Engineer,Nu AI,Technology,Hyderabad,"Python,TensorFlow,Machine Learning",2023-07-01,3.0,19.0
+14,Data Scientist,Xi Corp,Finance,Pune,"Python,SQL,Statistics",2023-07-20,2.0,14.0
+15,Analytics Engineer,Omicron,Technology,Bangalore,"Python,SQL,Cloud",2023-08-05,3.0,17.0
+16,Business Intelligence,Pi BI,Retail,Mumbai,"SQL,Power BI,Tableau",2023-08-20,2.0,11.0
+17,Data Analyst,Rho Ltd,Healthcare,Delhi,"SQL,Excel,Communication",2023-09-01,1.0,6.0
+18,Senior Data Scientist,Sigma DS,Technology,Bangalore,"Python,Machine Learning,Deep Learning",2023-09-15,5.0,28.0
+19,Data Engineer,Tau Systems,Technology,Chennai,"Python,SQL,Docker",2023-10-01,3.0,16.5
+20,ML Ops Engineer,Upsilon,Technology,Hyderabad,"Python,Docker,Cloud",2023-10-20,4.0,21.0
+21,Data Analyst,Phi Corp,Finance,Mumbai,"SQL,Excel,Data Analysis",2023-11-01,1.0,7.5
+22,Data Scientist,Chi Analytics,Healthcare,Pune,"Python,Statistics,Machine Learning",2023-11-15,3.0,15.0
+23,BI Analyst,Psi BI,Retail,Delhi,"SQL,Power BI,Excel",2023-12-01,2.0,9.5
+24,AI Engineer,Omega AI,Technology,Bangalore,"Python,TensorFlow,Cloud",2023-12-20,4.0,26.0
+25,Data Analyst,Alpha Data,Manufacturing,Chennai,"Excel,SQL,Statistics",2024-01-05,1.0,5.8
+26,Senior ML Engineer,Beta ML,Technology,Mumbai,"Python,Machine Learning,Deep Learning",2024-01-20,5.0,30.0
+27,Data Scientist,Gamma Sci,Finance,Hyderabad,"Python,SQL,Statistics",2024-02-05,3.0,17.0
+28,Data Analyst,Delta Anl,Healthcare,Pune,"SQL,Excel,Communication",2024-02-20,1.0,6.2
+29,Analytics Manager,Epsilon Mgr,Technology,Bangalore,"Python,SQL,Project Management",2024-03-05,6.0,32.0
+30,Data Engineer,Zeta Eng,Technology,Delhi,"Python,SQL,Cloud",2024-03-20,3.0,18.5
+31,ML Scientist,Eta Sci,Technology,Mumbai,"Python,Deep Learning,Statistics",2024-04-01,4.0,25.0
+32,BI Developer,Theta Dev,Finance,Chennai,"SQL,Power BI,Tableau",2024-04-15,2.0,12.0
+33,Data Analyst,Iota Anl,Retail,Bangalore,"SQL,Excel,Data Analysis",2024-05-01,1.0,7.0
+34,Data Scientist,Kappa Sci,Technology,Hyderabad,"Python,Machine Learning,Statistics",2024-05-15,3.0,19.0
+35,NLP Data Scientist,Lambda Sci,Technology,Pune,"Python,Machine Learning,Deep Learning",2024-06-01,4.0,23.0
+36,Data Analyst,Mu Anl,Healthcare,Mumbai,"SQL,Excel,Statistics",2024-06-15,2.0,8.0
+37,ML Engineer,Nu Eng,Technology,Delhi,"Python,TensorFlow,Machine Learning",2024-07-01,3.0,20.0
+38,Data Scientist,Xi Sci,Finance,Bangalore,"Python,SQL,Machine Learning",2024-07-15,4.0,22.0
+39,Analytics Engineer,Omicron Eng,Technology,Chennai,"Python,SQL,Docker",2024-08-01,3.0,18.0
+40,Data Engineer,Pi Eng,Technology,Hyderabad,"Python,Cloud,Docker",2024-08-15,4.0,22.5
+41,Data Analyst,Rho Anl,Manufacturing,Pune,"Excel,SQL,Communication",2024-09-01,1.0,6.0
+42,Senior Data Scientist,Sigma Sci,Technology,Mumbai,"Python,Machine Learning,Statistics",2024-09-15,6.0,35.0
+43,BI Analyst,Tau BI,Retail,Bangalore,"SQL,Power BI,Tableau",2024-10-01,2.0,11.0
+44,AI Researcher,Upsilon Res,Technology,Delhi,"Python,Deep Learning,Statistics",2024-10-15,5.0,28.0
+45,Data Analyst,Phi Anl,Finance,Chennai,"SQL,Excel,Data Analysis",2024-11-01,1.0,8.0
+46,ML Engineer,Chi ML,Technology,Hyderabad,"Python,Machine Learning,Cloud",2024-11-15,3.0,21.0
+47,Data Scientist,Psi Sci,Healthcare,Pune,"Python,Statistics,R",2024-12-01,3.0,16.0
+48,Data Engineer,Omega Eng,Technology,Mumbai,"Python,SQL,Cloud",2024-12-15,4.0,20.0
+49,Data Analyst,Alpha Anl,Retail,Bangalore,"SQL,Excel,Tableau",2025-01-05,1.0,7.5
+50,Senior ML Engineer,Beta Snr,Technology,Delhi,"Python,TensorFlow,Machine Learning",2025-01-20,5.0,32.0

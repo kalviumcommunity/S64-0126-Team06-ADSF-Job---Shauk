@@ -1,0 +1,24 @@
+name: job-hi-shauk
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pandas>=2.1
+  - numpy>=1.26
+  - scipy>=1.11
+  - matplotlib>=3.8
+  - seaborn>=0.13
+  - plotly>=5.18
+  - jupyter>=1.0
+  - ipykernel>=6.29
+  - pytest>=7.0
+  - pytest-cov>=4.0
+  - hypothesis>=6.0
+  - pip
+  - pip:
+    - rapidfuzz>=3.0
+    - pyyaml>=6.0
+    - rich>=13.0
+    - ruff>=0.3
+    - black>=24.0

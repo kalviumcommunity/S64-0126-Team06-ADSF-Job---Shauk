@@ -4,15 +4,27 @@
 # Core numerical + dataframe stack
 numpy>=1.26
 pandas>=2.1
+scipy>=1.11
 
 # Visualisation (Bhargav — assignments 4.39–4.43)
 matplotlib>=3.8
 seaborn>=0.13
+plotly>=5.18
 
 # Notebook environment (Harsh — assignments 4.7–4.10)
 jupyter>=1.0
 ipykernel>=6.29
 
+# Pipeline utilities — v2
+rapidfuzz>=3.0
+pyyaml>=6.0
+rich>=13.0
+
 # Code style (Bhargav — assignment 4.20 PEP8)
 black>=24.0
 ruff>=0.3
+
+# Testing — v2
+pytest>=7.0
+pytest-cov>=4.0
+hypothesis>=6.0

@@ -1,0 +1,33 @@
+random_seed: 42
+
+null_thresholds:
+  drop_column: 0.80  # Drop column if > 80% null
+  drop_row: 0.50     # Drop row if > 50% of values null
+
+min_support: 5  # Minimum sample size for any aggregation
+
+temporal_granularity_rules:
+  - max_days: 14
+    rule: "D"   # Daily  (raises ValueError — too short for trends)
+  - max_days: 90
+    rule: "W"   # Weekly
+  - max_days: 730
+    rule: "ME"  # Month-end (pandas 2.2+)
+  - max_days: 9999
+    rule: "QE"  # Quarter-end
+
+logging:
+  level: "INFO"   # DEBUG | INFO | WARNING | ERROR
+  rotation: "daily"
+  retention_days: 30
+
+export_interactive: false  # Set true to emit Plotly HTML to outputs/interactive/
+
+figures:
+  dpi: 150
+  format: "png"
+
+# Canonicalization
+canonicalize:
+  unmatched_policy: "keep_raw"   # 'drop' | 'keep_raw'
+  unmatched_warn_threshold: 0.20  # Warn if > 20% of raw skills are unmatched

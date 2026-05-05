@@ -1,0 +1,183 @@
+version: "2.1.0"
+last_updated: "2026-05-05"
+changelog:
+  - version: "2.1.0"
+    date: "2026-05-05"
+    changes: "Initial v2 vocabulary for Job-ही-Shauk with 20 canonical skills"
+
+# rapidfuzz score threshold (0–100 scale); 88 is conservative to avoid false positives
+fuzzy_match_threshold: 88
+
+canonical_skills:
+  python:
+    aliases:
+      - "python3"
+      - "python 3"
+      - "py"
+      - "python programming"
+      - "pythn"
+      - "pyhton"
+    category: "programming_language"
+
+  sql:
+    aliases:
+      - "structured query language"
+      - "mysql"
+      - "postgresql"
+      - "tsql"
+      - "pl/sql"
+      - "sqlite"
+      - "sql server"
+    category: "database"
+
+  machine_learning:
+    aliases:
+      - "ml"
+      - "machine learning"
+      - "machinelearning"
+      - "maching learning"
+      - "applied ml"
+    category: "data_science"
+
+  deep_learning:
+    aliases:
+      - "dl"
+      - "deep learning"
+      - "neural networks"
+      - "neural network"
+      - "ann"
+    category: "data_science"
+
+  data_analysis:
+    aliases:
+      - "data analytics"
+      - "data analyst"
+      - "data analyzing"
+      - "analytics"
+      - "data analysis skills"
+    category: "data_science"
+
+  excel:
+    aliases:
+      - "microsoft excel"
+      - "ms excel"
+      - "excel spreadsheets"
+      - "advanced excel"
+    category: "tool"
+
+  tensorflow:
+    aliases:
+      - "tf"
+      - "tensorflow 2"
+      - "tensorflow2"
+    category: "framework"
+
+  pytorch:
+    aliases:
+      - "torch"
+      - "pytorch framework"
+    category: "framework"
+
+  pandas:
+    aliases:
+      - "pandas library"
+      - "pd"
+      - "pandas dataframe"
+    category: "library"
+
+  numpy:
+    aliases:
+      - "numpy library"
+      - "np"
+      - "numerical python"
+    category: "library"
+
+  r:
+    aliases:
+      - "r programming"
+      - "r language"
+      - "r stats"
+      - "rstudio"
+    category: "programming_language"
+
+  tableau:
+    aliases:
+      - "tableau desktop"
+      - "tableau public"
+      - "tableau software"
+    category: "tool"
+
+  power_bi:
+    aliases:
+      - "powerbi"
+      - "power bi"
+      - "microsoft power bi"
+      - "ms power bi"
+    category: "tool"
+
+  java:
+    aliases:
+      - "java programming"
+      - "java8"
+      - "java 8"
+      - "java 11"
+      - "java development"
+    category: "programming_language"
+
+  javascript:
+    aliases:
+      - "js"
+      - "vanilla js"
+      - "ecmascript"
+      - "es6"
+    category: "programming_language"
+
+  docker:
+    aliases:
+      - "docker container"
+      - "containerization"
+      - "docker compose"
+    category: "devops"
+
+  cloud:
+    aliases:
+      - "aws"
+      - "azure"
+      - "gcp"
+      - "cloud computing"
+      - "amazon web services"
+      - "google cloud"
+      - "microsoft azure"
+    category: "cloud"
+
+  statistics:
+    aliases:
+      - "statistical analysis"
+      - "statistical modeling"
+      - "stats"
+      - "applied statistics"
+    category: "data_science"
+
+  communication:
+    aliases:
+      - "communication skills"
+      - "verbal communication"
+      - "written communication"
+      - "effective communication"
+    category: "soft_skill"
+
+  project_management:
+    aliases:
+      - "project management"
+      - "project mgmt"
+      - "pm skills"
+      - "program management"
+    category: "soft_skill"
+
+  scrum:
+    aliases:
+      - "agile"
+      - "agile methodology"
+      - "scrum methodology"
+      - "kanban"
+    category: "methodology"
